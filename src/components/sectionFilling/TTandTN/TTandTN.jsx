@@ -26,7 +26,7 @@ const TTandTN = ({
     for (let i = 0; i < pointsCount; i++) {
       points.push({
         /* Данные ТТ */
-        ttType: transformData[i]?.ttType || "",
+        ttType: transformData[i]?.ttType || "Отсутствует",
         ttSerialA: transformData[i]?.ttSerialA || "",
         ttSerialB: transformData[i]?.ttSerialB || "",
         ttSerialC: transformData[i]?.ttSerialC || "",
@@ -41,7 +41,7 @@ const TTandTN = ({
         ttSealB: transformData[i]?.ttSealB || "",
         ttSealC: transformData[i]?.ttSealC || "",
         /* Данные ТН */
-        tnType: transformData[i]?.tnType || "",
+        tnType: transformData[i]?.tnType || "Отсутствует",
         tnSerialA: transformData[i]?.tnSerialA || "",
         tnSerialB: transformData[i]?.tnSerialB || "",
         tnSerialC: transformData[i]?.tnSerialC || "",
