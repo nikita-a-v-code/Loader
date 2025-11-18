@@ -1,11 +1,51 @@
 import * as React from "react";
+import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
-import { TypeAbonent, Status, ADRESSNAME } from "../../../data/dataBase";
+import ErrorAlert from "../../../ui/ErrorAlert";
 
 const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerChange = () => {}, pointsCount = 1 }) => {
+  const [abonentTypes, setAbonentTypes] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  /* Загрузка данных из API */
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [abonentTypesRes, statusesRes] = await Promise.all([
+        fetch("http://localhost:3001/api/abonent-types"),
+        fetch("http://localhost:3001/api/statuses"),
+      ]);
+
+      if (!abonentTypesRes.ok) {
+        throw new Error(`Ошибка загрузки типов абонентов: ${abonentTypesRes.status}`);
+      }
+      if (!statusesRes.ok) {
+        throw new Error(`Ошибка загрузки статусов: ${statusesRes.status}`);
+      }
+
+      const [abonentTypesData, statusesData] = await Promise.all([abonentTypesRes.json(), statusesRes.json()]);
+
+      setAbonentTypes(abonentTypesData.map((item) => item.name));
+      setStatuses(statusesData.map((item) => item.name));
+    } catch (err) {
+      console.error("Error loading data:", err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [consumerPoints, setConsumerPoints] = React.useState(() => {
     const points = [];
     for (let i = 0; i < pointsCount; i++) {
@@ -66,9 +106,14 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
   // Проверка заполненности всех обязательных полей (тип абонента и статус счета)
   const allFilled = consumerPoints.every((point) => point.subscriberType && point.accountStatus && point.consumerName);
 
+  if (loading) {
+    return <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>Загрузка данных...</Box>;
+  }
+
   return (
     /* Главный контейнер - организует вертикальную структуру точек учета и навигации. */
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      {error && <ErrorAlert error={error} onRetry={loadData} title="Ошибка загрузки данных из базы" />}
       {consumerPoints.map((point, index) => {
         return (
           /* Контейнер для отдельной точки учета - визуальное выделение*/
@@ -143,7 +188,7 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
                 <EnSelect
                   id={`subscriberType-${index}`}
                   label="Тип абонента"
-                  options={TypeAbonent}
+                  options={abonentTypes}
                   value={point.subscriberType}
                   onChange={(e) => handleFieldChange(index, "subscriberType", e.target.value)}
                   required={true}
@@ -165,7 +210,7 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
                 <EnSelect
                   id={`accountStatus-${index}`}
                   label="Статус счета"
-                  options={Status}
+                  options={statuses}
                   value={point.accountStatus}
                   onChange={(e) => handleFieldChange(index, "accountStatus", e.target.value)}
                   required={true}

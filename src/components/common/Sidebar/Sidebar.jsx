@@ -1,7 +1,7 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
-import NavigationSections from "../NavigationSections/NavigationSections";
+import NavigationSections from "./NavigationSections/NavigationSections";
 
 const drawerWidth = 240;
 

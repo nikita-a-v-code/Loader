@@ -1,11 +1,11 @@
 import * as React from "react";
+import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
 import { useValidationErrors } from "../../../utils/Validation/Validation";
-import { IpAddresses, Protocols } from "../../../data/dataBase";
 
 const Connection = ({
   onNext,
@@ -17,6 +17,25 @@ const Connection = ({
   deviceData = {},
   consumerData = {},
 }) => {
+  const [ipAddresses, setIpAddresses] = useState([]);
+  const [protocols, setProtocols] = useState([]);
+
+  /* Загрузка списка IP адресов */
+  useEffect(() => {
+    fetch("http://localhost:3001/api/ip")
+      .then((res) => res.json())
+      .then((data) => setIpAddresses(data))
+      .catch((err) => console.error("Error loading IP addresses:", err));
+  }, []);
+
+  /* Загрузка типов протоколов */
+  useEffect(() => {
+    fetch("http://localhost:3001/api/protocol")
+      .then((res) => res.json())
+      .then((data) => setProtocols(data))
+      .catch((err) => console.error("Error loading protocols:", err));
+  }, []);
+
   const { errors: validationErrors, showError, clearError } = useValidationErrors();
 
   const calculateFinalCoeff = (pointIndex) => {
@@ -209,7 +228,7 @@ const Connection = ({
                 <EnSelect
                   id={`ipAddress-${index}`}
                   label="IP адрес"
-                  options={IpAddresses}
+                  options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
                   value={connection.ipAddress}
                   onChange={(e) => handleFieldChange(index, "ipAddress", e.target.value)}
                   required={true}
@@ -301,7 +320,7 @@ const Connection = ({
                 <EnSelect
                   id={`protocol-${index}`}
                   label="Протокол"
-                  options={Protocols}
+                  options={Array.isArray(protocols) ? protocols.map((p) => p.name) : []}
                   value={connection.protocol}
                   onChange={(e) => handleFieldChange(index, "protocol", e.target.value)}
                   required={true}

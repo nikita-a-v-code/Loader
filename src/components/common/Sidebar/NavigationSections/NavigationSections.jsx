@@ -1,5 +1,7 @@
 import * as React from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import UnsavedChangesDialog from "../../../../ui/UnsavedChangesDialog";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -10,10 +12,13 @@ import Button from "@mui/material/Button";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DescriptionIcon from "@mui/icons-material/Description";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 
 export default function NavigationSections({ showAsSidebar = false }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [targetRoute, setTargetRoute] = useState("");
 
   const sections = [
     {
@@ -40,10 +45,47 @@ export default function NavigationSections({ showAsSidebar = false }) {
       route: "/ImportExcel",
       color: "#4caf50",
     },
+    {
+      title: "Панель Администратора",
+      subtitle: "Управление справочниками",
+      description: "Добавление, изменение и удаление справочных данных",
+      icon: <AdminPanelSettingsIcon sx={{ fontSize: 40 }} />,
+      route: "/AdminPanel",
+      color: "#9c27b0",
+    },
   ];
 
   const handleCardClick = (route) => {
-    navigate(route);
+    // Проверяем, есть ли несохраненные данные
+    const hasUnsavedChanges = checkForUnsavedChanges();
+
+    if (hasUnsavedChanges && location.pathname !== route) {
+      setTargetRoute(route);
+      setDialogOpen(true);
+    } else {
+      navigate(route);
+    }
+  };
+
+  const checkForUnsavedChanges = () => {
+    // Проверяем localStorage на наличие несохраненных данных
+    const formData = localStorage.getItem("unsavedFormData");
+    const hasFormInputs = document.querySelectorAll("input, textarea, select").length > 0;
+
+    // Возвращаем true если есть данные в localStorage или заполненные поля
+    return formData || hasFormInputs;
+  };
+
+  const handleConfirmNavigation = () => {
+    setDialogOpen(false);
+    // Очищаем несохраненные данные
+    localStorage.removeItem("unsavedFormData");
+    navigate(targetRoute);
+  };
+
+  const handleCancelNavigation = () => {
+    setDialogOpen(false);
+    setTargetRoute("");
   };
 
   if (showAsSidebar) {
@@ -98,6 +140,13 @@ export default function NavigationSections({ showAsSidebar = false }) {
             );
           })}
         </Box>
+
+        <UnsavedChangesDialog
+          open={dialogOpen}
+          onConfirm={handleConfirmNavigation}
+          onCancel={handleCancelNavigation}
+          targetRoute={targetRoute}
+        />
       </Box>
     );
   }
@@ -142,6 +191,13 @@ export default function NavigationSections({ showAsSidebar = false }) {
           </Grid>
         ))}
       </Grid>
+
+      <UnsavedChangesDialog
+        open={dialogOpen}
+        onConfirm={handleConfirmNavigation}
+        onCancel={handleCancelNavigation}
+        targetRoute={targetRoute}
+      />
     </Box>
   );
 }

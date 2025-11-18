@@ -5,6 +5,7 @@ import SectionFilling from "./page/SectionFilling/SectionFilling";
 import SingleFilling from "./page/SingleFilling/SingleFilling";
 import ImportExcel from "./page/ImportExcel/ImportExcel";
 import Home from "./page/Home/Home";
+import AdminPanel from "./page/AdminPanel/AdminPanel";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/SectionFilling" element={<SectionFilling />} />
           <Route path="/SingleFilling" element={<SingleFilling />} />
           <Route path="/ImportExcel" element={<ImportExcel />} />
+          <Route path="/AdminPanel" element={<AdminPanel />} />
         </Routes>
       </BrowserRouter>
     </div>

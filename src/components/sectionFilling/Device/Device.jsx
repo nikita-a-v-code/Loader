@@ -1,9 +1,9 @@
 import * as React from "react";
+import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
-import { TypeDevice } from "../../../data/dataBase";
 import { validators, useValidationErrors, validateField } from "../../../utils/Validation/Validation";
 
 const Device = ({
@@ -15,15 +15,25 @@ const Device = ({
   pointsCount = 1,
   consumerData = {},
 }) => {
+  const [deviceTypes, setDeviceTypes] = useState([]);
+
+  /* Загрузка моделей счетчиков и их паролей */
+  useEffect(() => {
+    fetch("http://localhost:3001/api/device")
+      .then((res) => res.json())
+      .then((data) => setDeviceTypes(data))
+      .catch((err) => console.error("Error loading device types:", err));
+  }, []);
+
   const phaseOptions = [
     { value: "1", label: "1" },
     { value: "3", label: "3" },
   ];
 
-  const typeDeviceOptions = TypeDevice.map((device) => ({
-    value: device.name,
-    label: device.name,
-  }));
+  // Получение опций для моделей счетчиков из API
+  const getDeviceTypeOptions = () => {
+    return deviceTypes.map((device) => device.name);
+  };
 
   const { errors: validationErrors, showError, clearError } = useValidationErrors();
   const [devicePoints, setDevicePoints] = React.useState(() => {
@@ -124,7 +134,7 @@ const Device = ({
 
     // Автоматическая подстановка пароля при выборе модели счетчика
     if (fieldName === "typeDevice") {
-      const selectedDevice = TypeDevice.find((device) => device.name === value);
+      const selectedDevice = deviceTypes.find((device) => device.name === value);
       if (selectedDevice) {
         newPoints[pointIndex].password = selectedDevice.password;
       }
@@ -146,7 +156,7 @@ const Device = ({
 
     // При копировании модели счетчика также копируем пароль
     if (fieldName === "typeDevice") {
-      const selectedDevice = TypeDevice.find((device) => device.name === sourceValue);
+      const selectedDevice = deviceTypes.find((device) => device.name === sourceValue);
       if (selectedDevice) {
         newPoints.forEach((point) => {
           point.password = selectedDevice.password;
@@ -171,7 +181,7 @@ const Device = ({
 
     // При копировании модели счетчика также копируем пароль
     if (fieldName === "typeDevice") {
-      const selectedDevice = TypeDevice.find((device) => device.name === sourceValue);
+      const selectedDevice = deviceTypes.find((device) => device.name === sourceValue);
       if (selectedDevice) {
         newPoints[sourceIndex + 1].password = selectedDevice.password;
       }
@@ -221,7 +231,7 @@ const Device = ({
                     <EnSelect
                       id={`typeDevice-${index}`}
                       label={"Модель счетчика"}
-                      options={typeDeviceOptions}
+                      options={getDeviceTypeOptions()}
                       value={device.typeDevice}
                       onChange={(e) => handleFieldChange(index, "typeDevice", e.target.value)}
                       required={true}

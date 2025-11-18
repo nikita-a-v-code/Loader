@@ -19,6 +19,7 @@ export default function EnSelect({
   freeInput = false, // Новый параметр для свободного ввода
   searchable = false, // Новый параметр для поиска по списку
   error = false, // Параметр для отображения ошибки
+  disabled = false,
 }) {
   // Если включен поиск по списку, используем Autocomplete
   if (searchable) {
@@ -27,6 +28,7 @@ export default function EnSelect({
         <Autocomplete
           id={id}
           options={options}
+          disabled={disabled}
           getOptionLabel={(option) => {
             if (typeof option === "object") {
               return option.label ?? option.name ?? option.value ?? "";
