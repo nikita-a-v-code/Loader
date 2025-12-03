@@ -5,6 +5,7 @@ import Button from "@mui/material/Button";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
 import ErrorAlert from "../../../ui/ErrorAlert";
+import ApiService from "../../../services/api";
 
 const Structure = ({
   onNext,
@@ -31,12 +32,7 @@ const Structure = ({
       setLoading(true);
       setError(null);
 
-      const res = await fetch("http://localhost:3001/api/mpes");
-      if (!res.ok) {
-        throw new Error(`Ошибка загрузки МПЭС: ${res.status}`);
-      }
-
-      const data = await res.json();
+      const data = await ApiService.getMpes();
       setMpes(data);
     } catch (err) {
       console.error("Error loading mpes:", err);
@@ -50,11 +46,7 @@ const Structure = ({
   const loadRkesByMpes = async (mpesId) => {
     if (rkesOptions[mpesId]) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/rkes/by-mpes/${mpesId}`);
-      if (!res.ok) {
-        throw new Error(`Ошибка загрузки РКЭС: ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await ApiService.getRkesByMpes(mpesId);
       setRkesOptions((prev) => ({ ...prev, [mpesId]: data }));
     } catch (err) {
       console.error("Error loading rkes:", err);
@@ -66,11 +58,7 @@ const Structure = ({
   const loadMuByRkes = async (rkesId) => {
     if (muOptions[rkesId]) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/master-units/by-rkes/${rkesId}`);
-      if (!res.ok) {
-        throw new Error(`Ошибка загрузки мастерских участков: ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await ApiService.getMasterUnitsByRkes(rkesId);
       setMuOptions((prev) => ({ ...prev, [rkesId]: data }));
     } catch (err) {
       console.error("Error loading master units:", err);

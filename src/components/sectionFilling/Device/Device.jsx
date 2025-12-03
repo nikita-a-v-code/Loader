@@ -5,6 +5,8 @@ import Button from "@mui/material/Button";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
 import { validators, useValidationErrors, validateField } from "../../../utils/Validation/Validation";
+import ErrorAlert from "../../../ui/ErrorAlert";
+import ApiService from "../../../services/api";
 
 const Device = ({
   onNext,
@@ -16,14 +18,27 @@ const Device = ({
   consumerData = {},
 }) => {
   const [deviceTypes, setDeviceTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  /* Загрузка моделей счетчиков и их паролей */
   useEffect(() => {
-    fetch("http://localhost:3001/api/device")
-      .then((res) => res.json())
-      .then((data) => setDeviceTypes(data))
-      .catch((err) => console.error("Error loading device types:", err));
+    loadDeviceTypes();
   }, []);
+
+  const loadDeviceTypes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const data = await ApiService.getDevices();
+      setDeviceTypes(data);
+    } catch (err) {
+      console.error("Error loading device:", err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const phaseOptions = [
     { value: "1", label: "1" },
@@ -49,6 +64,7 @@ const Device = ({
         numberTerminal: deviceData[i]?.numberTerminal || "",
         numberCasing: deviceData[i]?.numberCasing || "",
         password: deviceData[i]?.password || "",
+        note: deviceData[i]?.note || "",
       });
     }
     return device;
@@ -191,9 +207,14 @@ const Device = ({
     onDeviceChange(newPoints);
   };
 
+  if (loading) {
+    return <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>Загрузка данных...</Box>;
+  }
+
   return (
     /* Главный контейнер - организует вертикальную структуру. */
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+      {error && <ErrorAlert error={error} onRetry={loadDeviceTypes} title="Ошибка загрузки данных из базы" />}
       {/* Контейнер однотипных полей - располагает однотипные поля горизонтально в ряд */}
       <Box sx={{ display: "flex", flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
         {devicePoints.map((device, index) => {
@@ -468,6 +489,27 @@ const Device = ({
                       onApplyToNext={() => applyToNext(index, "password")}
                       totalPoints={devicePoints.length}
                       arrowDirection="right"
+                    />
+                  </Box>
+
+                  {/* Поле для ввода примечания */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 1,
+                      width: "100%",
+                    }}
+                  >
+                    <EnSelect
+                      id={`note-${index}`}
+                      label="Примечание"
+                      value={device.note}
+                      onChange={(e) => handleFieldChange(index, "note", e.target.value)}
+                      freeInput={true}
+                      required={false}
+                      size="small"
+                      sx={{ minWidth: 210 }}
                     />
                   </Box>
                 </Box>

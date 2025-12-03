@@ -19,29 +19,29 @@ const AddNewElement = ({
 
   // Допустимые префиксы для населенных пунктов
   const settlementPrefixes = ["г. ", "д. ", "пгт. ", "пос. ", "с. "];
-  
+
   // Допустимые префиксы для улиц
   const streetPrefixes = ["пер. ", "пл. ", "ул. ", "пр-кт "];
 
   // Проверка на дубликаты названий населенных пунктов
   const checkSettlementDuplicate = (name) => {
     if (!validateSettlement || !existingItems.length) return false;
-    
+
     const trimmedName = name.trim();
-    const matchedPrefix = settlementPrefixes.find(prefix => trimmedName.startsWith(prefix));
+    const matchedPrefix = settlementPrefixes.find((prefix) => trimmedName.startsWith(prefix));
     if (!matchedPrefix) return false;
-    
+
     const nameAfterPrefix = trimmedName.substring(matchedPrefix.length);
     if (!nameAfterPrefix) return false;
-    
+
     // Проверяем, есть ли уже населенный пункт с таким же названием (любым префиксом)
-    return existingItems.some(item => {
-      const existingName = typeof item === 'string' ? item : item.name;
+    return existingItems.some((item) => {
+      const existingName = typeof item === "string" ? item : item.name;
       if (!existingName) return false;
-      
-      const existingPrefix = settlementPrefixes.find(prefix => existingName.startsWith(prefix));
+
+      const existingPrefix = settlementPrefixes.find((prefix) => existingName.startsWith(prefix));
       if (!existingPrefix) return false;
-      
+
       const existingNameAfterPrefix = existingName.substring(existingPrefix.length);
       return existingNameAfterPrefix.toLowerCase() === nameAfterPrefix.toLowerCase();
     });
@@ -55,7 +55,7 @@ const AddNewElement = ({
     if (!trimmedName) return { isValid: false, error: "Название не может быть пустым" };
 
     // Проверяем, что название начинается с одного из префиксов
-    const matchedPrefix = settlementPrefixes.find(prefix => trimmedName.startsWith(prefix));
+    const matchedPrefix = settlementPrefixes.find((prefix) => trimmedName.startsWith(prefix));
     if (!matchedPrefix) {
       return { isValid: false, error: `Название должно начинаться с: ${settlementPrefixes.join(", ")}` };
     }
@@ -65,18 +65,18 @@ const AddNewElement = ({
     if (!nameAfterPrefix) {
       return { isValid: false, error: "После префикса должно быть название" };
     }
-    
+
     // Проверяем, что первая буква после префикса заглавная
     const firstChar = nameAfterPrefix.charAt(0);
     if (!(firstChar === firstChar.toUpperCase() && /[А-ЯA-Z]/.test(firstChar))) {
       return { isValid: false, error: "Первая буква после префикса должна быть заглавной" };
     }
-    
+
     // Проверяем на дубликаты
     if (checkSettlementDuplicate(trimmedName)) {
       return { isValid: false, error: `Населенный пункт "${nameAfterPrefix}" уже существует` };
     }
-    
+
     return { isValid: true, error: "" };
   };
 
@@ -88,7 +88,7 @@ const AddNewElement = ({
     if (!trimmedName) return { isValid: false, error: "Название не может быть пустым" };
 
     // Проверяем, что название начинается с одного из префиксов
-    const matchedPrefix = streetPrefixes.find(prefix => trimmedName.startsWith(prefix));
+    const matchedPrefix = streetPrefixes.find((prefix) => trimmedName.startsWith(prefix));
     if (!matchedPrefix) {
       return { isValid: false, error: `Название должно начинаться с: ${streetPrefixes.join(", ")}` };
     }
@@ -98,13 +98,13 @@ const AddNewElement = ({
     if (!nameAfterPrefix) {
       return { isValid: false, error: "После префикса должно быть название" };
     }
-    
+
     // Проверяем, что первая буква после префикса заглавная
     const firstChar = nameAfterPrefix.charAt(0);
     if (!(firstChar === firstChar.toUpperCase() && /[А-ЯA-Z]/.test(firstChar))) {
       return { isValid: false, error: "Первая буква после префикса должна быть заглавной" };
     }
-    
+
     return { isValid: true, error: "" };
   };
 
@@ -161,12 +161,11 @@ const AddNewElement = ({
 
     setLoading(true);
     try {
-      const result = await onAdd(trimmedValue);
-      if (result) {
-        handleClose();
-      }
+      await onAdd(trimmedValue);
+      handleClose();
     } catch (error) {
       console.error("Error adding new item:", error);
+      handleClose();
     } finally {
       setLoading(false);
     }
@@ -207,7 +206,14 @@ const AddNewElement = ({
               value={inputValue}
               onChange={handleInputChange}
               error={!!validationError}
-              helperText={validationError || (validateSettlement ? `Пример: ${settlementPrefixes[0]}Киров` : validateStreet ? `Пример: ${streetPrefixes[0]}Ленина` : "")}
+              helperText={
+                validationError ||
+                (validateSettlement
+                  ? `Пример: ${settlementPrefixes[0]}Киров`
+                  : validateStreet
+                  ? `Пример: ${streetPrefixes[0]}Ленина`
+                  : "")
+              }
               onKeyPress={handleKeyPress}
               variant="outlined"
               disabled={loading}

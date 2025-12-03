@@ -9,6 +9,7 @@ import ProtocolsManager from "../../components/adminPannel/ProtocolsManager";
 import ApiConfigManager from "../../components/adminPannel/ApiConfigManager";
 import Navbar from "../../components/common/Navbar/Navbar";
 import Sidebar from "../../components/common/Sidebar/Sidebar";
+import AddressManager from "../../components/adminPannel/AddressManager";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -24,6 +25,7 @@ const AdminPanel = () => {
     { label: "Модели счетчиков", component: <DevicesManager /> },
     { label: "IP адреса", component: <ConnectionsManager /> },
     { label: "Протоколы", component: <ProtocolsManager /> },
+    { label: "Населенные пункты/Улицы", component: <AddressManager /> },
     { label: "Настройки API", component: <ApiConfigManager /> },
   ];
 

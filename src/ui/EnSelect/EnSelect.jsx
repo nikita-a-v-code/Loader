@@ -95,8 +95,18 @@ export default function EnSelect({
           value={value}
           label={required ? `${label} *` : label}
           onChange={onChange}
-          renderValue={(x) => {
-            return x;
+          renderValue={(selectedValue) => {
+            if (!selectedValue) return "";
+            const selectedOption = options.find(opt => {
+              const optValue = typeof opt === "object" ? opt.value : opt;
+              return optValue === selectedValue;
+            });
+            if (selectedOption) {
+              return typeof selectedOption === "object" ? 
+                selectedOption.label ?? selectedOption.name ?? selectedOption.value : 
+                selectedOption;
+            }
+            return selectedValue;
           }}
         >
           <MenuItem value="">

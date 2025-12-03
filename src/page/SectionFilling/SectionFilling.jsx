@@ -17,8 +17,12 @@ import TTandTN from "../../components/sectionFilling/TTandTN/TTandTN";
 import Connection from "../../components/sectionFilling/Connection/Connection";
 
 const SectionFilling = () => {
+  /* Строка, определяющая какой компонент сейчас отображается */
   const [content, setContent] = React.useState("quantity");
+  /* Текущий активный шаг в stepper */
   const [currentStep, setCurrentStep] = React.useState(0);
+  /* Максимальный шаг до которого дошел пользователь */
+  const [maxReachedStep, setMaxReachedStep] = React.useState(0);
 
   const stepSections = [
     { title: "Количество точек учета", key: "quantity" },
@@ -32,7 +36,7 @@ const SectionFilling = () => {
   ];
 
   const [quantityData, setQuantityData] = React.useState({});
-  const [addressData, setAddressData] = React.useState({});
+  const [addressData, setAddressData] = React.useState([]);
   const [structureData, setStructureData] = React.useState({});
   const [consumerData, setConsumerData] = React.useState({});
   const [networkData, setNetworkData] = React.useState({});
@@ -40,42 +44,37 @@ const SectionFilling = () => {
   const [transformData, setTransformData] = React.useState({});
   const [connectionData, setConnectionData] = React.useState({});
 
+  /* Кнопка "Назад" на 1 шаг */
   const handleBack = () => {
     if (currentStep > 0) {
-      if (currentStep === 1) {
-        setContent("quantity");
-        setCurrentStep(0);
-      } else if (currentStep === 2) {
-        setContent("consumer");
-        setCurrentStep(1);
-      } else if (currentStep === 3) {
-        setContent("structure");
-        setCurrentStep(2);
-      } else if (currentStep === 4) {
-        setContent("address");
-        setCurrentStep(3);
-      } else if (currentStep === 5) {
-        setContent("networkcode");
-        setCurrentStep(4);
-      } else if (currentStep === 6) {
-        setContent("device");
-        setCurrentStep(5);
-      } else if (currentStep === 7) {
-        setContent("transform");
-        setCurrentStep(6);
-      }
+      const prevStep = currentStep - 1; // Вычисляем предыдущий шаг
+      setCurrentStep(prevStep); // Устанавливаем предыдущий шаг как текущий
+      setContent(stepSections[prevStep].key); // Меняем контент на соответствующий
     }
   };
 
+  /* Логика доступности только шагов до максимального достигнутого включительно */
+  // stepIndex - номер шага для проврки
   const isStepAccessible = (stepIndex) => {
-    return stepIndex <= currentStep;
+    return stepIndex <= maxReachedStep;
   };
 
+  /* Обработка клика по шагу в stepper */
   const handleStepClick = (stepIndex) => {
+    // Проверяем доступность шага
     if (isStepAccessible(stepIndex)) {
+      // Устанавливаем выбранный шаг как текущий
       setCurrentStep(stepIndex);
+      // Меняем контент
       setContent(stepSections[stepIndex].key);
     }
+  };
+
+  /* Переход к новому шагу через кнопку "Далее" */
+  const goToStep = (stepIndex) => {
+    setCurrentStep(stepIndex); // Устанавливаем новый текущий шаг в степпере
+    setContent(stepSections[stepIndex].key); // Меняем контент
+    setMaxReachedStep(Math.max(maxReachedStep, stepIndex)); // Обновляем максимальный достигнутый шаг
   };
 
   return (
@@ -87,9 +86,12 @@ const SectionFilling = () => {
         <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
           <Toolbar />
           <Box sx={{ mb: 4 }}>
+            {/* Определяет какой шаг подсвечен как активный (синий) */}
             <Stepper activeStep={currentStep} sx={{ mb: 3 }}>
               {stepSections.map((section, index) => (
-                <Step key={index}>
+                /* Помечает шаг как завершенный (синий с галочкой) */
+                <Step key={index} completed={index < maxReachedStep && index !== currentStep}>
+                  {/* Визуальное оформление степпера */}
                   <StepLabel
                     sx={{
                       cursor: isStepAccessible(index) ? "pointer" : "not-allowed",
@@ -105,10 +107,7 @@ const SectionFilling = () => {
           </Box>
           {content === "quantity" ? (
             <Quantity
-              onNext={() => {
-                setContent("consumer");
-                setCurrentStep(1);
-              }}
+              onNext={() => goToStep(1)}
               onBack={handleBack}
               currentStep={currentStep}
               quantityData={quantityData}
@@ -117,10 +116,7 @@ const SectionFilling = () => {
             />
           ) : content === "consumer" ? (
             <Consumer
-              onNext={() => {
-                setContent("structure");
-                setCurrentStep(2);
-              }}
+              onNext={() => goToStep(2)}
               onBack={handleBack}
               currentStep={currentStep}
               consumerData={consumerData}
@@ -129,10 +125,7 @@ const SectionFilling = () => {
             />
           ) : content === "structure" ? (
             <Structure
-              onNext={() => {
-                setContent("address");
-                setCurrentStep(3);
-              }}
+              onNext={() => goToStep(3)}
               onBack={handleBack}
               currentStep={currentStep}
               structureData={structureData}
@@ -142,10 +135,7 @@ const SectionFilling = () => {
             />
           ) : content === "address" ? (
             <Adress
-              onNext={() => {
-                setContent("networkcode");
-                setCurrentStep(4);
-              }}
+              onNext={() => goToStep(4)}
               onBack={handleBack}
               currentStep={currentStep}
               addressData={addressData}
@@ -155,10 +145,7 @@ const SectionFilling = () => {
             />
           ) : content === "networkcode" ? (
             <NetworkCode
-              onNext={() => {
-                setContent("device");
-                setCurrentStep(5);
-              }}
+              onNext={() => goToStep(5)}
               onBack={handleBack}
               currentStep={currentStep}
               networkData={networkData}
@@ -168,10 +155,7 @@ const SectionFilling = () => {
             />
           ) : content === "device" ? (
             <Device
-              onNext={() => {
-                setContent("transform");
-                setCurrentStep(6);
-              }}
+              onNext={() => goToStep(6)}
               onBack={handleBack}
               currentStep={currentStep}
               deviceData={deviceData}
@@ -181,10 +165,7 @@ const SectionFilling = () => {
             />
           ) : content === "transform" ? (
             <TTandTN
-              onNext={() => {
-                setContent("connection");
-                setCurrentStep(7);
-              }}
+              onNext={() => goToStep(7)}
               onBack={handleBack}
               currentStep={currentStep}
               transformData={transformData}
@@ -206,6 +187,9 @@ const SectionFilling = () => {
               transformData={transformData}
               deviceData={deviceData}
               consumerData={consumerData}
+              structureData={structureData}
+              addressData={addressData}
+              networkData={networkData}
             />
           )}
         </Box>

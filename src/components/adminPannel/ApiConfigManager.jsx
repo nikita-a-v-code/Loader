@@ -13,7 +13,9 @@ const ApiConfigManager = () => {
   }, []);
 
   const loadCurrentConfig = () => {
-    const current = process.env.REACT_APP_API_URL || "http://localhost:3001";
+    // Получаем актуальный URL (сначала из localStorage, потом из .env)
+    const savedUrl = localStorage.getItem("REACT_APP_API_URL");
+    const current = savedUrl || process.env.REACT_APP_API_URL || "http://localhost:3001";
     setCurrentUrl(current);
     setApiUrl(current);
   };

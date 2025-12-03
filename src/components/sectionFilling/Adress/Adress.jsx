@@ -7,13 +7,14 @@ import AddNewElement from "../../../ui/Buttons/AddNewElement";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import { validators, useValidationErrors, validateField } from "../../../utils/Validation/Validation";
 import ErrorAlert from "../../../ui/ErrorAlert";
+import ApiService from "../../../services/api";
 
 const Adress = ({
   onNext,
   onBack,
   currentStep,
   // Пропсы для сохранения состояния
-  addressData = {},
+  addressData = [],
   onAddressChange = () => {},
   pointsCount = 1, // Количество точек учета
   consumerData = {},
@@ -22,6 +23,7 @@ const Adress = ({
   const [str, setStr] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     loadSettlements();
@@ -32,12 +34,7 @@ const Adress = ({
       setLoading(true);
       setError(null);
 
-      const res = await fetch("http://localhost:3001/api/settlements");
-      if (!res.ok) {
-        throw new Error(`Ошибка загрузки населенных пунктов: ${res.status}`);
-      }
-
-      const data = await res.json();
+      const data = await ApiService.getSettlements();
       setSettl(data);
     } catch (err) {
       console.error("Error loading settl:", err);
@@ -51,11 +48,7 @@ const Adress = ({
   const loadStreetsBySettlements = async (settlementId) => {
     if (str[settlementId]) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/streets/by-settlement/${settlementId}`);
-      if (!res.ok) {
-        throw new Error(`Ошибка загрузки населенных пунктов: ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await ApiService.getStreetsBySettlement(settlementId);
       setStr((prev) => ({ ...prev, [settlementId]: data }));
     } catch (err) {
       console.error("Error loading streets:", err);
@@ -66,25 +59,18 @@ const Adress = ({
   // Функция для создания нового населенного пункта
   const createNewSettlement = async (name) => {
     try {
-      const res = await fetch("http://localhost:3001/api/settlements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-
-      if (res.status === 409) {
+      const newSettlement = await ApiService.createSettlement({ name });
+      setSettl((prev) => [...prev, newSettlement]);
+      setSuccessMessage(`Населенный пункт "${name}" успешно создан, выберите его из списка`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      return newSettlement;
+    } catch (err) {
+      if (err.message.includes("409")) {
         alert("Населенный пункт уже существует");
         return null;
       }
-
-      if (!res.ok) throw new Error("Ошибка создания населенного пункта");
-
-      const newSettlement = await res.json();
-      setSettl((prev) => [...prev, newSettlement]);
-      return newSettlement;
-    } catch (err) {
       console.error("Error creating settlement:", err);
-      alert("Ошибка при создании населенного пункта");
+      setError(err);
       return null;
     }
   };
@@ -95,36 +81,30 @@ const Adress = ({
     if (!selectedSettlement) return null;
 
     try {
-      const res = await fetch("http://localhost:3001/api/streets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, settlement_id: selectedSettlement.id }),
-      });
-
-      if (res.status === 409) {
-        alert("Улица уже существует в этом населенном пункте");
-        return null;
-      }
-
-      if (!res.ok) throw new Error("Ошибка создания улицы");
-
-      const newStreet = await res.json();
+      const newStreet = await ApiService.createStreet({ name, settlement_id: selectedSettlement.id });
       setStr((prev) => ({
         ...prev,
         [selectedSettlement.id]: [...(prev[selectedSettlement.id] || []), newStreet],
       }));
+      setSuccessMessage(`Улица "${name}" успешно создана, выберите ее из списка`);
+      setTimeout(() => setSuccessMessage(null), 3000);
       return newStreet;
     } catch (err) {
+      if (err.message.includes("409")) {
+        alert("Улица уже существует в этом населенном пункте");
+        return null;
+      }
       console.error("Error creating street:", err);
-      alert("Ошибка при создании улицы");
+      setError(err);
       return null;
     }
   };
 
   // Состояние для множественных точек учета
   const { errors: validationErrors, showError, clearError } = useValidationErrors();
-  const [addressPoints, setAddressPoints] = React.useState(() => {
-    // Инициализируем массив для каждой точки учета
+
+  // Используем данные напрямую из addressData без локального состояния
+  const addressPoints = React.useMemo(() => {
     const points = [];
     for (let i = 0; i < pointsCount; i++) {
       points.push({
@@ -137,14 +117,21 @@ const Adress = ({
       });
     }
     return points;
-  });
+  }, [addressData, pointsCount]);
 
-  // Обновление данных в родительском компоненте
-  const updateAddressData = () => {
-    onAddressChange(addressPoints);
-  };
+  // Загружаем улицы при восстановлении данных
+  useEffect(() => {
+    addressPoints.forEach((point) => {
+      if (point.settlement) {
+        const selectedSettlement = settl.find((s) => s.name === point.settlement);
+        if (selectedSettlement) {
+          loadStreetsBySettlements(selectedSettlement.id);
+        }
+      }
+    });
+  }, [addressPoints, settl]);
 
-  // Обработчик изменения поля для конкретной точки учета
+  /* Обработчик изменения поля для конкретной точки учета */
   const handleFieldChange = (pointIndex, fieldName, value) => {
     const errorKey = `${fieldName}-${pointIndex}`;
 
@@ -182,7 +169,6 @@ const Adress = ({
       }
     }
 
-    setAddressPoints(newPoints);
     onAddressChange(newPoints);
   };
 
@@ -198,7 +184,6 @@ const Adress = ({
       }
       return updatedPoint;
     });
-    setAddressPoints(newPoints);
     onAddressChange(newPoints);
   };
 
@@ -217,7 +202,6 @@ const Adress = ({
       newPoints[sourceIndex + 1].street = "";
     }
 
-    setAddressPoints(newPoints);
     onAddressChange(newPoints);
   };
 
@@ -242,6 +226,11 @@ const Adress = ({
     /* Главный контейнер - организует вертикальную структуру точек учета и навигации. */
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {error && <ErrorAlert error={error} onRetry={loadSettlements} title="Ошибка загрузки данных из базы" />}
+      {successMessage && (
+        <Box sx={{ p: 2, bgcolor: "success.light", color: "success.contrastText", borderRadius: 1 }}>
+          {successMessage}
+        </Box>
+      )}
       {addressPoints.map((point, index) => {
         // Удаляем неиспользуемую переменную availableStreets
 
@@ -428,10 +417,7 @@ const Adress = ({
         </Button>
         <Button
           variant="contained"
-          onClick={() => {
-            updateAddressData(); // Сохраняем данные перед переходом
-            typeof onNext === "function" && onNext();
-          }}
+          onClick={() => typeof onNext === "function" && onNext()}
           disabled={!allFilled}
           color={allFilled ? "success" : "primary"}
         >

@@ -114,8 +114,13 @@ class ApiService {
   }
 
   /* Методы для РКЭС */
+
   static async getRkes() {
     return this.get("rkes");
+  }
+
+  static async getRkesByMpes(mpesId) {
+    return this.get(`rkes/by-mpes/${mpesId}`);
   }
 
   static async createRkes(data) {
@@ -133,6 +138,10 @@ class ApiService {
   /* Методы для МУ */
   static async getMasterUnits() {
     return this.get("master-units");
+  }
+
+  static async getMasterUnitsByRkes(rkesId) {
+    return this.get(`master-units/by-rkes/${rkesId}`);
   }
 
   static async createMasterUnit(data) {
@@ -196,6 +205,72 @@ class ApiService {
 
   static async deleteProtocol(id) {
     return this.delete(`protocols/${id}`);
+  }
+
+  /* Методы для населенных пунктов */
+  static async getSettlements() {
+    return this.get("settlements");
+  }
+
+  static async createSettlement(data) {
+    return this.post("settlements", data);
+  }
+
+  static async updateSettlement(id, data) {
+    return this.put(`settlements/${id}`, data);
+  }
+
+  static async deleteSettlement(id) {
+    return this.delete(`settlements/${id}`);
+  }
+
+  /* Методы для улиц */
+  static async getStreets() {
+    return this.get("streets");
+  }
+
+  static async getStreetsBySettlement(settlementId) {
+    return this.get(`streets/by-settlement/${settlementId}`);
+  }
+
+  static async createStreet(data) {
+    return this.post("streets", data);
+  }
+
+  static async updateStreet(id, data) {
+    return this.put(`streets/${id}`, data);
+  }
+
+  static async deleteStreet(id) {
+    return this.delete(`streets/${id}`);
+  }
+
+  /* Метод для выгрузки в Excel */
+  static async exportToExcel(data) {
+    const url = `${getApiBaseUrl()}/api/excel/export`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Получаем blob для скачивания файла
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `loader_data_${new Date().toISOString().split("T")[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
   }
 }
 

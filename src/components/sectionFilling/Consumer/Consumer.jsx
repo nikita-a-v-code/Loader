@@ -5,6 +5,7 @@ import Button from "@mui/material/Button";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
 import ErrorAlert from "../../../ui/ErrorAlert";
+import ApiService from "../../../services/api";
 
 const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerChange = () => {}, pointsCount = 1 }) => {
   const [abonentTypes, setAbonentTypes] = useState([]);
@@ -22,22 +23,13 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
       setLoading(true);
       setError(null);
 
-      const [abonentTypesRes, statusesRes] = await Promise.all([
-        fetch("http://localhost:3001/api/abonent-types"),
-        fetch("http://localhost:3001/api/statuses"),
+      const [statusesData, abonentTypesData] = await Promise.all([
+        ApiService.getStatuses(),
+        ApiService.getAbonentTypes(),
       ]);
 
-      if (!abonentTypesRes.ok) {
-        throw new Error(`Ошибка загрузки типов абонентов: ${abonentTypesRes.status}`);
-      }
-      if (!statusesRes.ok) {
-        throw new Error(`Ошибка загрузки статусов: ${statusesRes.status}`);
-      }
-
-      const [abonentTypesData, statusesData] = await Promise.all([abonentTypesRes.json(), statusesRes.json()]);
-
-      setAbonentTypes(abonentTypesData.map((item) => item.name));
-      setStatuses(statusesData.map((item) => item.name));
+      setStatuses(statusesData);
+      setAbonentTypes(abonentTypesData);
     } catch (err) {
       console.error("Error loading data:", err);
       setError(err);
@@ -188,7 +180,7 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
                 <EnSelect
                   id={`subscriberType-${index}`}
                   label="Тип абонента"
-                  options={abonentTypes}
+                  options={abonentTypes.map((item) => item.name)}
                   value={point.subscriberType}
                   onChange={(e) => handleFieldChange(index, "subscriberType", e.target.value)}
                   required={true}
@@ -210,7 +202,7 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
                 <EnSelect
                   id={`accountStatus-${index}`}
                   label="Статус счета"
-                  options={statuses}
+                  options={statuses.map((item) => item.name)}
                   value={point.accountStatus}
                   onChange={(e) => handleFieldChange(index, "accountStatus", e.target.value)}
                   required={true}
