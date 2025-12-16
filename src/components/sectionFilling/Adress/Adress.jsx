@@ -100,9 +100,6 @@ const Adress = ({
     }
   };
 
-  // Состояние для множественных точек учета
-  const { errors: validationErrors, showError, clearError } = useValidationErrors();
-
   // Используем данные напрямую из addressData без локального состояния
   const addressPoints = React.useMemo(() => {
     const points = [];
@@ -131,27 +128,25 @@ const Adress = ({
     });
   }, [addressPoints, settl]);
 
+  // Состояние для множественных точек учета
+  const {
+    errors: validationErrors,
+    showError,
+    clearError,
+    validateField: validateFieldWithError,
+  } = useValidationErrors();
+
   /* Обработчик изменения поля для конкретной точки учета */
   const handleFieldChange = (pointIndex, fieldName, value) => {
     const errorKey = `${fieldName}-${pointIndex}`;
 
-    /* Валидация полей */
+    // Валидация полей
     if (fieldName === "apartment" || fieldName === "house") {
-      if (!validateField(value, validators.digits)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateFieldWithError(value, validators.digits, errorKey)) return;
     }
 
     if (fieldName === "building") {
-      if (!validateField(value, validators.uppercaseLetters)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateFieldWithError(value, validators.uppercaseLetters, errorKey)) return;
     }
 
     const newPoints = [...addressPoints];

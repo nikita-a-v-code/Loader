@@ -272,6 +272,11 @@ class ApiService {
     link.remove();
     window.URL.revokeObjectURL(downloadUrl);
   }
+
+  /* Метод для отправки Excel на email */
+  static async sendExcelToEmail(data, email) {
+    return this.post("excel/send-email", { data, email });
+  }
 }
 
 export default ApiService;

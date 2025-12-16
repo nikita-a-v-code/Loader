@@ -50,7 +50,6 @@ const Device = ({
     return deviceTypes.map((device) => device.name);
   };
 
-  const { errors: validationErrors, showError, clearError } = useValidationErrors();
   const [devicePoints, setDevicePoints] = React.useState(() => {
     const device = [];
     for (let i = 0; i < pointsCount; i++) {
@@ -78,68 +77,32 @@ const Device = ({
   // Проверка заполненности всех обязательных полей (тип абонента и статус счета)
   const allFilled = devicePoints.every((point) => point.typeDevice && point.serialNumber && point.password);
 
+  const {
+    errors: validationErrors,
+    showError,
+    clearError,
+    validateField,
+    validateAndFormatDateField,
+  } = useValidationErrors();
+
   // Обработчик изменения значения поля для конкретной точки потребителя
   const handleFieldChange = (pointIndex, fieldName, value) => {
     const errorKey = `${fieldName}-${pointIndex}`;
 
-    /* Валидация полей */
-
+    // Валидация полей
     if (fieldName === "verificationInterval") {
-      const threeDigitsRegex = /^\d{0,2}$/;
-      if (!threeDigitsRegex.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.twoDigits, errorKey)) return;
     }
 
     if (fieldName === "serialNumber") {
-      const digitsOnlyRegex = /^\d*$/;
-      if (!digitsOnlyRegex.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
-    }
-
-    if (fieldName === "numberFeeder04" || fieldName === "numberTP") {
-      const twoCharsRegex = /^[\dА-ЯA-Z]{0,2}$/;
-      if (!twoCharsRegex.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.serialNumber, errorKey)) return;
     }
 
     if (fieldName === "dateInstallation" || fieldName === "verificationDate") {
-      // Проверяем, есть ли недопустимые символы
-      if (!/^[\d.]*$/.test(value)) {
-        showError(errorKey);
-        return;
-      }
-
-      // Получаем текущее значение для сравнения
       const currentValue = devicePoints[pointIndex][fieldName] || "";
-
-      // Если длина уменьшается (удаление), не форматируем
-      if (value.length >= currentValue.length) {
-        // Автоформатирование при добавлении символов
-        let formattedValue = value.replace(/\D/g, ""); // Убираем все не-цифры
-        if (formattedValue.length >= 2) {
-          formattedValue = formattedValue.substring(0, 2) + "." + formattedValue.substring(2);
-        }
-        if (formattedValue.length >= 5) {
-          formattedValue = formattedValue.substring(0, 5) + "." + formattedValue.substring(5, 9);
-        }
-        if (formattedValue.length > 10) {
-          formattedValue = formattedValue.substring(0, 10);
-        }
-        value = formattedValue;
-      }
-      clearError(errorKey);
+      const formattedValue = validateAndFormatDateField(value, currentValue, errorKey);
+      if (formattedValue === null) return;
+      value = formattedValue;
     }
 
     const newPoints = [...devicePoints];

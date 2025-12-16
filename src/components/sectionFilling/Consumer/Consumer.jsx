@@ -6,6 +6,7 @@ import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
 import ErrorAlert from "../../../ui/ErrorAlert";
 import ApiService from "../../../services/api";
+import { useSectionData } from "../../../hooks/useSectionData";
 
 const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerChange = () => {}, pointsCount = 1 }) => {
   const [abonentTypes, setAbonentTypes] = useState([]);
@@ -13,7 +14,21 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  /* Загрузка данных из API */
+  // Используем кастомный хук для управления данными
+  const {
+    points: consumerPoints,
+    handleFieldChange,
+    applyToAll,
+    applyToNext,
+    checkAllFilled,
+  } = useSectionData(consumerData, pointsCount, onConsumerChange, {
+    consumerName: "",
+    deliveryPoint: "",
+    contractNumber: "",
+    subscriberType: "",
+    accountStatus: "",
+  });
+
   useEffect(() => {
     loadData();
   }, []);
@@ -38,200 +53,122 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
     }
   };
 
-  const [consumerPoints, setConsumerPoints] = React.useState(() => {
-    const points = [];
-    for (let i = 0; i < pointsCount; i++) {
-      points.push({
-        consumerName: consumerData[i]?.consumerName || "",
-        deliveryPoint: consumerData[i]?.deliveryPoint || "",
-        contractNumber: consumerData[i]?.contractNumber || "",
-        subscriberType: consumerData[i]?.subscriberType || "",
-        accountStatus: consumerData[i]?.accountStatus || "",
-      });
-    }
-    return points;
-  });
-
-  // Сохранение данных потребителей в родительский компонент
-  const updateConsumerData = () => {
-    onConsumerChange(consumerPoints);
-  };
-
-  // Обработчик изменения значения поля для конкретной точки потребителя
-  const handleFieldChange = (pointIndex, fieldName, value) => {
-    const newPoints = [...consumerPoints];
-    newPoints[pointIndex] = {
-      ...newPoints[pointIndex],
-      [fieldName]: value,
-    };
-    setConsumerPoints(newPoints);
-    onConsumerChange(newPoints);
-  };
-
-  // Применение значения поля ко всем точкам потребителей (синяя кнопка)
-  const applyToAll = (sourceIndex, fieldName) => {
-    const sourceValue = consumerPoints[sourceIndex][fieldName];
-    if (!sourceValue) return;
-
-    const newPoints = consumerPoints.map((point) => ({
-      ...point,
-      [fieldName]: sourceValue,
-    }));
-    setConsumerPoints(newPoints);
-    onConsumerChange(newPoints);
-  };
-
-  // Копирование значения поля в следующую строку (зеленая кнопка)
-  const applyToNext = (sourceIndex, fieldName) => {
-    const sourceValue = consumerPoints[sourceIndex][fieldName];
-    if (!sourceValue || sourceIndex >= consumerPoints.length - 1) return;
-
-    const newPoints = [...consumerPoints];
-    newPoints[sourceIndex + 1] = {
-      ...newPoints[sourceIndex + 1],
-      [fieldName]: sourceValue,
-    };
-    setConsumerPoints(newPoints);
-    onConsumerChange(newPoints);
-  };
-
-  // Проверка заполненности всех обязательных полей (тип абонента и статус счета)
-  const allFilled = consumerPoints.every((point) => point.subscriberType && point.accountStatus && point.consumerName);
+  // Проверка заполненности обязательных полей
+  const allFilled = checkAllFilled(["subscriberType", "accountStatus", "consumerName"]);
 
   if (loading) {
     return <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>Загрузка данных...</Box>;
   }
 
   return (
-    /* Главный контейнер - организует вертикальную структуру точек учета и навигации. */
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {error && <ErrorAlert error={error} onRetry={loadData} title="Ошибка загрузки данных из базы" />}
-      {consumerPoints.map((point, index) => {
-        return (
-          /* Контейнер для отдельной точки учета - визуальное выделение*/
-          <Box key={index} sx={{ mb: 1, border: "2px solid black", borderRadius: 2, p: 2, width: "fit-content" }}>
-            {/* Контейнер, организующий горизонтальное размещение всех элементов внутри точки учета */}
+      {consumerPoints.map((point, index) => (
+        <Box key={index} sx={{ mb: 1, border: "2px solid black", borderRadius: 2, p: 2, width: "fit-content" }}>
+          <Box sx={{ display: "flex", gap: 4, alignItems: "start", flexWrap: "wrap" }}>
+            {/* Заголовок */}
             <Box
               sx={{
-                display: "flex",
-                gap: 4,
-                alignItems: "start",
-                flexWrap: "wrap",
+                fontWeight: "bold",
+                fontSize: "16px",
+                mt: 2,
+                minWidth: 200,
+                maxWidth: 200,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
-              {/* Контейнер  для заголовка */}
-              <Box
-                sx={{
-                  fontWeight: "bold",
-                  fontSize: "16px",
-                  mt: 2,
-                  minWidth: 200,
-                  maxWidth: 200,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {point.consumerName || "Точка учета"}
-              </Box>
+              {point.consumerName || "Точка учета"}
+            </Box>
 
-              {/* Поле для ввода наименования потребителя */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <EnSelect
-                  id={`consumerName-${index}`}
-                  label="Наименование потребителя"
-                  value={point.consumerName}
-                  onChange={(e) => handleFieldChange(index, "consumerName", e.target.value)}
-                  freeInput={true}
-                  required={true}
-                  helperText="Обязательное поле"
-                  sx={{ minWidth: 200, flex: 1 }}
-                />
-              </Box>
+            {/* Наименование потребителя */}
+            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+              <EnSelect
+                id={`consumerName-${index}`}
+                label="Наименование потребителя"
+                value={point.consumerName}
+                onChange={(e) => handleFieldChange(index, "consumerName", e.target.value)}
+                freeInput={true}
+                required={true}
+                helperText="Обязательное поле"
+                sx={{ minWidth: 200, flex: 1 }}
+              />
+            </Box>
 
-              {/* Поле для ввода наименования точки поставки */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <EnSelect
-                  id={`deliveryPoint-${index}`}
-                  label="Наименование точки поставки"
-                  value={point.deliveryPoint}
-                  onChange={(e) => handleFieldChange(index, "deliveryPoint", e.target.value)}
-                  freeInput={true}
-                  required={false}
-                  sx={{ minWidth: 200, flex: 1 }}
-                />
-              </Box>
+            {/* Точка поставки */}
+            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+              <EnSelect
+                id={`deliveryPoint-${index}`}
+                label="Наименование точки поставки"
+                value={point.deliveryPoint}
+                onChange={(e) => handleFieldChange(index, "deliveryPoint", e.target.value)}
+                freeInput={true}
+                sx={{ minWidth: 200, flex: 1 }}
+              />
+            </Box>
 
-              {/* Поле для ввода номера договора (лицевого счета) */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <EnSelect
-                  id={`contractNumber-${index}`}
-                  label="Номер договора (лицевой счет)"
-                  value={point.contractNumber}
-                  onChange={(e) => handleFieldChange(index, "contractNumber", e.target.value)}
-                  freeInput={true}
-                  required={false}
-                  sx={{ minWidth: 200, flex: 1 }}
-                />
-              </Box>
+            {/* Номер договора */}
+            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+              <EnSelect
+                id={`contractNumber-${index}`}
+                label="Номер договора (лицевой счет)"
+                value={point.contractNumber}
+                onChange={(e) => handleFieldChange(index, "contractNumber", e.target.value)}
+                freeInput={true}
+                sx={{ minWidth: 200, flex: 1 }}
+              />
+            </Box>
 
-              {/* Поле для выбора типа абонента */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <EnSelect
-                  id={`subscriberType-${index}`}
-                  label="Тип абонента"
-                  options={abonentTypes.map((item) => item.name)}
-                  value={point.subscriberType}
-                  onChange={(e) => handleFieldChange(index, "subscriberType", e.target.value)}
-                  required={true}
-                  helperText="Обязательное поле"
-                  sx={{ minWidth: 200, flex: 1 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={point.subscriberType}
-                  onApplyToAll={() => applyToAll(index, "subscriberType")}
-                  onApplyToNext={() => applyToNext(index, "subscriberType")}
-                  totalPoints={consumerPoints.length}
-                />
-              </Box>
+            {/* Тип абонента */}
+            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+              <EnSelect
+                id={`subscriberType-${index}`}
+                label="Тип абонента"
+                options={abonentTypes.map((item) => item.name)}
+                value={point.subscriberType}
+                onChange={(e) => handleFieldChange(index, "subscriberType", e.target.value)}
+                required={true}
+                helperText="Обязательное поле"
+                sx={{ minWidth: 200, flex: 1 }}
+              />
+              <CopyButtons
+                pointsCount={pointsCount}
+                index={index}
+                fieldValue={point.subscriberType}
+                onApplyToAll={() => applyToAll(index, "subscriberType")}
+                onApplyToNext={() => applyToNext(index, "subscriberType")}
+                totalPoints={consumerPoints.length}
+              />
+            </Box>
 
-              {/* Поле для выбора статуса счета */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <EnSelect
-                  id={`accountStatus-${index}`}
-                  label="Статус счета"
-                  options={statuses.map((item) => item.name)}
-                  value={point.accountStatus}
-                  onChange={(e) => handleFieldChange(index, "accountStatus", e.target.value)}
-                  required={true}
-                  helperText="Обязательное поле"
-                  sx={{ minWidth: 200, flex: 1 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={point.accountStatus}
-                  onApplyToAll={() => applyToAll(index, "accountStatus")}
-                  onApplyToNext={() => applyToNext(index, "accountStatus")}
-                  totalPoints={consumerPoints.length}
-                />
-              </Box>
+            {/* Статус счета */}
+            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+              <EnSelect
+                id={`accountStatus-${index}`}
+                label="Статус счета"
+                options={statuses.map((item) => item.name)}
+                value={point.accountStatus}
+                onChange={(e) => handleFieldChange(index, "accountStatus", e.target.value)}
+                required={true}
+                helperText="Обязательное поле"
+                sx={{ minWidth: 200, flex: 1 }}
+              />
+              <CopyButtons
+                pointsCount={pointsCount}
+                index={index}
+                fieldValue={point.accountStatus}
+                onApplyToAll={() => applyToAll(index, "accountStatus")}
+                onApplyToNext={() => applyToNext(index, "accountStatus")}
+                totalPoints={consumerPoints.length}
+              />
             </Box>
           </Box>
-        );
-      })}
+        </Box>
+      ))}
 
-      {/* Кнопки навигации вне обводки */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 1,
-          mt: 1,
-        }}
-      >
+      {/* Кнопки навигации */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}>
         <Button
           variant="outlined"
           onClick={() => typeof onBack === "function" && onBack()}
@@ -241,10 +178,7 @@ const Consumer = ({ onNext, onBack, currentStep, consumerData = {}, onConsumerCh
         </Button>
         <Button
           variant="contained"
-          onClick={() => {
-            updateConsumerData(); // Сохраняем данные перед переходом
-            typeof onNext === "function" && onNext();
-          }}
+          onClick={() => typeof onNext === "function" && onNext()}
           disabled={!allFilled}
           color={allFilled ? "success" : "primary"}
         >

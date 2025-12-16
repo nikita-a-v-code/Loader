@@ -14,8 +14,6 @@ const TTandTN = ({
   pointsCount = 1,
   consumerData = {},
 }) => {
-  const { errors: validationErrors, showError, clearError } = useValidationErrors();
-
   // Проверка заполненности всех обязательных полей (Коэффициент трансформации ТТ и Коэффициент трансформации ТН)
   const allFilled = () => {
     return transformPoints.every((point) => point.ttCoeff && point.tnCoeff);
@@ -60,62 +58,39 @@ const TTandTN = ({
     return points;
   });
 
+  const {
+    errors: validationErrors,
+    showError,
+    clearError,
+    validateField,
+    validateAndFormatDateField,
+  } = useValidationErrors();
+
   // Обработчик изменения значения поля для конкретной точки потребителя
   const handleFieldChange = (pointIndex, fieldName, value) => {
     const errorKey = `${fieldName}-${pointIndex}`;
 
-    // Валидация для серийных номеров - только цифры
+    // Валидация для серийных номеров
     if (fieldName.includes("Serial")) {
-      if (!/^\d*$/.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.serialNumber, errorKey)) return;
     }
 
-    // Валидация для межповерочного интервала - только цифры до 2 символов
+    // Валидация для межповерочного интервала
     if (fieldName.includes("Interval")) {
-      if (!/^\d{0,2}$/.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.intervals, errorKey)) return;
     }
 
-    // Валидация для коэффициентов - только цифры
+    // Валидация для коэффициентов
     if (fieldName.includes("Coeff")) {
-      if (!/^\d*$/.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.coefficients, errorKey)) return;
     }
 
     // Валидация для дат
     if (fieldName.includes("Date")) {
-      if (!/^[\d.]*$/.test(value)) {
-        showError(errorKey);
-        return;
-      }
-
       const currentValue = transformPoints[pointIndex][fieldName] || "";
-      if (value.length >= currentValue.length) {
-        let formattedValue = value.replace(/\D/g, "");
-        if (formattedValue.length >= 2) {
-          formattedValue = formattedValue.substring(0, 2) + "." + formattedValue.substring(2);
-        }
-        if (formattedValue.length >= 5) {
-          formattedValue = formattedValue.substring(0, 5) + "." + formattedValue.substring(5, 9);
-        }
-        if (formattedValue.length > 10) {
-          formattedValue = formattedValue.substring(0, 10);
-        }
-        value = formattedValue;
-      }
-      clearError(errorKey);
+      const formattedValue = validateAndFormatDateField(value, currentValue, errorKey);
+      if (formattedValue === null) return;
+      value = formattedValue;
     }
 
     const newPoints = [...transformPoints];

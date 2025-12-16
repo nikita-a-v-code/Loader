@@ -3,12 +3,20 @@ import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import Typography from "@mui/material/Typography";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
-import { useValidationErrors } from "../../../utils/Validation/Validation";
+import { validators, useValidationErrors } from "../../../utils/Validation/Validation";
 import ErrorAlert from "../../../ui/ErrorAlert";
 import ApiService from "../../../services/api";
 import { useExportData } from "../../../hooks/useExportData";
+import { calculateNetworkAddress } from "../../../utils/networkAdress";
 
 const Connection = ({
   onNext,
@@ -49,52 +57,16 @@ const Connection = ({
     }
   };
 
-  const { errors: validationErrors, showError, clearError } = useValidationErrors();
-
   const calculateFinalCoeff = (pointIndex) => {
     const ttCoeff = parseFloat(transformData[pointIndex]?.ttCoeff) || 1;
     const tnCoeff = parseFloat(transformData[pointIndex]?.tnCoeff) || 1;
     return (ttCoeff * tnCoeff).toString();
   };
 
-  const calculateNetworkAddress = (pointIndex) => {
+  const getNetworkAddress = (pointIndex) => {
     const deviceModel = deviceData[pointIndex]?.typeDevice;
     const serialNumber = deviceData[pointIndex]?.serialNumber;
-
-    if (!deviceModel || !serialNumber) return "";
-
-    // CE серия: все цифры кроме первых 6
-    if (["CE 208", "CE 307", "CE 308"].includes(deviceModel)) {
-      return serialNumber.substring(6);
-    }
-
-    // Милур серия: последние 4 цифры + 16
-    if (["Милур 107", "Милур 307"].includes(deviceModel)) {
-      const lastFour = serialNumber.slice(-4);
-      const result = parseInt(lastFour) + 16;
-      return result.toString();
-    }
-
-    // МИР серия: последние 4 цифры
-    if (["МИР С-04", "МИР С-05", "МИР С-07"].includes(deviceModel)) {
-      return serialNumber.slice(-4);
-    }
-
-    // РиМ серия: всегда 0
-    if (deviceModel.includes("РиМ") || deviceModel.includes("Рим")) {
-      return "0";
-    }
-
-    // Меркурий серия: 2 последние цифры + логика с +10
-    if (deviceModel.includes("Меркурий")) {
-      let lastTwo = parseInt(serialNumber.slice(-2));
-      while (lastTwo < 17) {
-        lastTwo += 10;
-      }
-      return lastTwo.toString();
-    }
-
-    return "";
+    return calculateNetworkAddress(deviceModel, serialNumber);
   };
 
   const [connectionPoints, setConnectionPoints] = React.useState(() => {
@@ -117,16 +89,28 @@ const Connection = ({
         numberUSPD: connectionData[i]?.numberUSPD || "",
         userUSPD: connectionData[i]?.userUSPD || "",
         passwordUSPD: connectionData[i]?.passwordUSPD || "",
+        showUSPD: connectionData[i]?.showUSPD || false,
       });
     }
     return points;
   });
 
+  // Обработчик переключения тумблера УСПД
+  const handleUSPDToggle = (pointIndex, checked) => {
+    const newPoints = [...connectionPoints];
+    newPoints[pointIndex] = {
+      ...newPoints[pointIndex],
+      showUSPD: checked,
+    };
+    setConnectionPoints(newPoints);
+    onConnectionChange(newPoints);
+  };
+
   // Проверка заполненности всех обязательных полей
   const allFilled = () => {
     return connectionPoints.every(
       (point, index) =>
-        (calculateNetworkAddress(index) || point.networkAddress) &&
+        (getNetworkAddress(index) || point.networkAddress) &&
         point.ipAddress &&
         point.port &&
         point.protocol &&
@@ -134,54 +118,29 @@ const Connection = ({
     );
   };
 
+  const { errors: validationErrors, showError, clearError, validateField } = useValidationErrors();
+  const [emailDialog, setEmailDialog] = useState(false);
+  const [email, setEmail] = useState("nikitaav_oit@komenergo.kirov.ru");
+  const [emailSending, setEmailSending] = useState(false);
+
   const handleFieldChange = (pointIndex, fieldName, value) => {
     const errorKey = `${fieldName}-${pointIndex}`;
 
-    // Валидация для номера сим карты (короткий) - только цифры
+    // Валидация полей
     if (fieldName === "simCardShort") {
-      if (!/^\d*$/.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.simCardShort, errorKey)) return;
     }
 
-    // Валидация для номера сим карты (полный) - должен начинаться с 89 и максимум 11 цифр
     if (fieldName === "simCardFull") {
-      if (!/^\d*$/.test(value)) {
-        showError(errorKey);
-        return;
-      }
-      if (value.length > 11) {
-        showError(errorKey);
-        return;
-      }
-      if (value.length >= 2 && !value.startsWith("89")) {
-        showError(errorKey);
-        return;
-      }
-      clearError(errorKey);
+      if (!validateField(value, validators.simCardFull, errorKey)) return;
     }
 
-    // Валидация для номера коммуникатора - только цифры
     if (fieldName === "communicatorNumber") {
-      if (!/^\d*$/.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.communicatorNumber, errorKey)) return;
     }
 
-    // Валидация для порта - только цифры
     if (fieldName === "port") {
-      if (!/^\d*$/.test(value)) {
-        showError(errorKey);
-        return;
-      } else {
-        clearError(errorKey);
-      }
+      if (!validateField(value, validators.port, errorKey)) return;
     }
 
     const newPoints = [...connectionPoints];
@@ -228,7 +187,7 @@ const Connection = ({
     deviceData,
     transformData,
     connectionData: connectionPoints,
-    calculateNetworkAddress,
+    calculateNetworkAddress: getNetworkAddress,
     calculateFinalCoeff,
   });
 
@@ -238,6 +197,26 @@ const Connection = ({
     } catch (error) {
       console.error("Ошибка при выгрузке в Excel:", error);
       alert("Ошибка при создании Excel файла");
+    }
+  };
+
+  const handleSendToEmail = async () => {
+    if (!email || !email.includes("@")) {
+      alert("Введите корректный email адрес");
+      return;
+    }
+
+    try {
+      setEmailSending(true);
+      await ApiService.sendExcelToEmail(exportData, email);
+      alert(`Файл успешно отправлен на ${email}`);
+      setEmailDialog(false);
+      setEmail("");
+    } catch (error) {
+      console.error("Ошибка при отправке на email:", error);
+      alert("Ошибка при отправке на email");
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -272,6 +251,22 @@ const Connection = ({
             </Box>
             {/* Контейнер,  организующий вертикальную структуру полей внутри каждой точки учета */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 240 }}>
+              {/* Тумблер для полей УСПД */}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={connection.showUSPD}
+                    onChange={(e) => handleUSPDToggle(index, e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                    Опрос через УСПД
+                  </Typography>
+                }
+                sx={{ mb: 1 }}
+              />
               {/* Поле для выбора IP адреса */}
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
                 <EnSelect
@@ -512,115 +507,120 @@ const Connection = ({
                 />
               </Box>
 
-              {/* Поле для ввода наименования УСПД */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <EnSelect
-                  id={`nameUSPD-${index}`}
-                  label="Наименование УСПД"
-                  value={connection.nameUSPD}
-                  onChange={(e) => handleFieldChange(index, "nameUSPD", e.target.value)}
-                  freeInput={true}
-                  size="small"
-                  sx={{ width: 360 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={connection.nameUSPD}
-                  onApplyToAll={() => applyToAll(index, "nameUSPD")}
-                  onApplyToNext={() => applyToNext(index, "nameUSPD")}
-                  totalPoints={connectionPoints.length}
-                  arrowDirection="right"
-                />
-              </Box>
+              {/* Поля УСПД - показываются только при включенном тумблере */}
+              {connection.showUSPD && (
+                <>
+                  {/* Поле для ввода наименования УСПД */}
+                  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                    <EnSelect
+                      id={`nameUSPD-${index}`}
+                      label="Наименование УСПД"
+                      value={connection.nameUSPD}
+                      onChange={(e) => handleFieldChange(index, "nameUSPD", e.target.value)}
+                      freeInput={true}
+                      size="small"
+                      sx={{ width: 360 }}
+                    />
+                    <CopyButtons
+                      pointsCount={pointsCount}
+                      index={index}
+                      fieldValue={connection.nameUSPD}
+                      onApplyToAll={() => applyToAll(index, "nameUSPD")}
+                      onApplyToNext={() => applyToNext(index, "nameUSPD")}
+                      totalPoints={connectionPoints.length}
+                      arrowDirection="right"
+                    />
+                  </Box>
 
-              {/* Поле для ввода типа УСПД */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <EnSelect
-                  id={`typeUSPD-${index}`}
-                  label="Тип УСПД"
-                  value={connection.typeUSPD}
-                  onChange={(e) => handleFieldChange(index, "typeUSPD", e.target.value)}
-                  freeInput={true}
-                  size="small"
-                  sx={{ width: 360 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={connection.typeUSPD}
-                  onApplyToAll={() => applyToAll(index, "typeUSPD")}
-                  onApplyToNext={() => applyToNext(index, "typeUSPD")}
-                  totalPoints={connectionPoints.length}
-                  arrowDirection="right"
-                />
-              </Box>
+                  {/* Поле для ввода типа УСПД */}
+                  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                    <EnSelect
+                      id={`typeUSPD-${index}`}
+                      label="Тип УСПД"
+                      value={connection.typeUSPD}
+                      onChange={(e) => handleFieldChange(index, "typeUSPD", e.target.value)}
+                      freeInput={true}
+                      size="small"
+                      sx={{ width: 360 }}
+                    />
+                    <CopyButtons
+                      pointsCount={pointsCount}
+                      index={index}
+                      fieldValue={connection.typeUSPD}
+                      onApplyToAll={() => applyToAll(index, "typeUSPD")}
+                      onApplyToNext={() => applyToNext(index, "typeUSPD")}
+                      totalPoints={connectionPoints.length}
+                      arrowDirection="right"
+                    />
+                  </Box>
 
-              {/* Поле для ввода серийного номера УСПД */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <EnSelect
-                  id={`numberUSPD-${index}`}
-                  label="Серийный номер УСПД"
-                  value={connection.numberUSPD}
-                  onChange={(e) => handleFieldChange(index, "numberUSPD", e.target.value)}
-                  freeInput={true}
-                  size="small"
-                  sx={{ width: 360 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={connection.numberUSPD}
-                  onApplyToAll={() => applyToAll(index, "numberUSPD")}
-                  onApplyToNext={() => applyToNext(index, "numberUSPD")}
-                  totalPoints={connectionPoints.length}
-                  arrowDirection="right"
-                />
-              </Box>
+                  {/* Поле для ввода серийного номера УСПД */}
+                  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                    <EnSelect
+                      id={`numberUSPD-${index}`}
+                      label="Серийный номер УСПД"
+                      value={connection.numberUSPD}
+                      onChange={(e) => handleFieldChange(index, "numberUSPD", e.target.value)}
+                      freeInput={true}
+                      size="small"
+                      sx={{ width: 360 }}
+                    />
+                    <CopyButtons
+                      pointsCount={pointsCount}
+                      index={index}
+                      fieldValue={connection.numberUSPD}
+                      onApplyToAll={() => applyToAll(index, "numberUSPD")}
+                      onApplyToNext={() => applyToNext(index, "numberUSPD")}
+                      totalPoints={connectionPoints.length}
+                      arrowDirection="right"
+                    />
+                  </Box>
 
-              {/* Поле для ввода пользователя УСПД */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <EnSelect
-                  id={`userUSPD-${index}`}
-                  label="Пользователь УСПД"
-                  value={connection.userUSPD}
-                  onChange={(e) => handleFieldChange(index, "userUSPD", e.target.value)}
-                  freeInput={true}
-                  size="small"
-                  sx={{ width: 360 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={connection.userUSPD}
-                  onApplyToAll={() => applyToAll(index, "userUSPD")}
-                  onApplyToNext={() => applyToNext(index, "userUSPD")}
-                  totalPoints={connectionPoints.length}
-                  arrowDirection="right"
-                />
-              </Box>
+                  {/* Поле для ввода пользователя УСПД */}
+                  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                    <EnSelect
+                      id={`userUSPD-${index}`}
+                      label="Пользователь УСПД"
+                      value={connection.userUSPD}
+                      onChange={(e) => handleFieldChange(index, "userUSPD", e.target.value)}
+                      freeInput={true}
+                      size="small"
+                      sx={{ width: 360 }}
+                    />
+                    <CopyButtons
+                      pointsCount={pointsCount}
+                      index={index}
+                      fieldValue={connection.userUSPD}
+                      onApplyToAll={() => applyToAll(index, "userUSPD")}
+                      onApplyToNext={() => applyToNext(index, "userUSPD")}
+                      totalPoints={connectionPoints.length}
+                      arrowDirection="right"
+                    />
+                  </Box>
 
-              {/* Поле для ввода пароля УСПД */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <EnSelect
-                  id={`passwordUSPD-${index}`}
-                  label="Пароль УСПД"
-                  value={connection.passwordUSPD}
-                  onChange={(e) => handleFieldChange(index, "passwordUSPD", e.target.value)}
-                  freeInput={true}
-                  size="small"
-                  sx={{ width: 360 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={connection.passwordUSPD}
-                  onApplyToAll={() => applyToAll(index, "passwordUSPD")}
-                  onApplyToNext={() => applyToNext(index, "passwordUSPD")}
-                  totalPoints={connectionPoints.length}
-                  arrowDirection="right"
-                />
-              </Box>
+                  {/* Поле для ввода пароля УСПД */}
+                  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                    <EnSelect
+                      id={`passwordUSPD-${index}`}
+                      label="Пароль УСПД"
+                      value={connection.passwordUSPD}
+                      onChange={(e) => handleFieldChange(index, "passwordUSPD", e.target.value)}
+                      freeInput={true}
+                      size="small"
+                      sx={{ width: 360 }}
+                    />
+                    <CopyButtons
+                      pointsCount={pointsCount}
+                      index={index}
+                      fieldValue={connection.passwordUSPD}
+                      onApplyToAll={() => applyToAll(index, "passwordUSPD")}
+                      onApplyToNext={() => applyToNext(index, "passwordUSPD")}
+                      totalPoints={connectionPoints.length}
+                      arrowDirection="right"
+                    />
+                  </Box>
+                </>
+              )}
             </Box>
           </Box>
         ))}
@@ -634,7 +634,35 @@ const Connection = ({
         <Button variant="contained" onClick={handleExportToExcel} color="success" disabled={!allFilled()}>
           Выгрузить в Excel
         </Button>
+        <Button variant="contained" onClick={() => setEmailDialog(true)} color="primary" disabled={!allFilled()}>
+          Отправить на Email
+        </Button>
       </Box>
+
+      {/* Диалог для ввода email */}
+      <Dialog open={emailDialog} onClose={() => setEmailDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Отправить Excel файл на электронную почту</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Email адрес"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@mail.com"
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEmailDialog(false)}>Отмена</Button>
+          <Button onClick={handleSendToEmail} variant="contained" disabled={emailSending}>
+            {emailSending ? "Отправляем..." : "Отправить"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
