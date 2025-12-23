@@ -3,6 +3,11 @@ import { Box, Typography, TextField, Button, Card, CardContent, Alert, Chip } fr
 import { Save, Refresh } from "@mui/icons-material";
 
 const ApiConfigManager = () => {
+  /*
+    Менеджер конфигурации API/настроек.
+    - Загружает и сохраняет конфигурационные параметры через API.
+    - Ошибки отображаются через `ErrorAlert`.
+  */
   const [apiUrl, setApiUrl] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
   const [message, setMessage] = useState("");
@@ -13,7 +18,7 @@ const ApiConfigManager = () => {
   }, []);
 
   const loadCurrentConfig = () => {
-    // Получаем актуальный URL (сначала из localStorage, потом из .env)
+    // loadCurrentConfig: инициализация текущей конфигурации API (берется из localStorage или .env)
     const savedUrl = localStorage.getItem("REACT_APP_API_URL");
     const current = savedUrl || process.env.REACT_APP_API_URL || "http://localhost:3001";
     setCurrentUrl(current);
@@ -21,10 +26,9 @@ const ApiConfigManager = () => {
   };
 
   const handleSave = () => {
+    // handleSave: сохраняет URL API в localStorage и предлагает перезагрузить страницу
     try {
-      // Сохраняем в localStorage для текущей сессии
       localStorage.setItem("REACT_APP_API_URL", apiUrl);
-
       setMessage("URL сохранен! Перезагрузите страницу для применения изменений.");
       setMessageType("success");
 
@@ -39,6 +43,7 @@ const ApiConfigManager = () => {
   };
 
   const handleReset = () => {
+    // handleReset: сбрасывает локальную конфигурацию и предлагает перезагрузить страницу
     localStorage.removeItem("REACT_APP_API_URL");
     setMessage("Настройки сброшены! Перезагрузите страницу.");
     setMessageType("info");
@@ -49,6 +54,7 @@ const ApiConfigManager = () => {
   };
 
   const testConnection = async () => {
+    // testConnection: делает HTTP запрос к указанному API URL и показывает результат
     try {
       setMessage("Проверка соединения...");
       setMessageType("info");

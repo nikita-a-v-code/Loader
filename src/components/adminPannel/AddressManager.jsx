@@ -25,6 +25,14 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import ApiService from "../../services/api";
+import ErrorAlert from "../../ui/ErrorAlert";
+
+/*
+  Менеджер адресов (населенные пункты и улицы).
+  - Загружает `settlements` и `streets`.
+  - Поддерживает выбор населенного пункта и CRUD операций для поселений/улиц.
+  - При ошибках отображает `ErrorAlert` и сохраняет ошибку в `error`.
+*/
 
 const AddressManager = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -34,6 +42,7 @@ const AddressManager = () => {
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [formData, setFormData] = useState({ name: "", settlementId: "" });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadSettlements();
@@ -47,34 +56,58 @@ const AddressManager = () => {
     }
   }, [selectedSettlement]);
 
+  const reloadCurrentData = () => {
+    // reloadCurrentData: очищает ошибку и перезагружает settlements и streets (если выбран settlement)
+    setError(null);
+    loadSettlements();
+    if (selectedSettlement) {
+      loadStreetsBySettlement(selectedSettlement);
+    } else {
+      setStreets([]);
+    }
+  };
+
   const loadSettlements = async () => {
+    // loadSettlements: загружает список населенных пунктов из API
     try {
       const data = await ApiService.getSettlements();
       setSettlements(data);
+      setError(null);
     } catch (err) {
       console.error("Error loading settlements:", err);
+      setError(err);
     }
   };
 
   const loadStreetsBySettlement = async (settlementId) => {
+    // loadStreetsBySettlement: загружает улицы для заданного settlementId
+    if (!settlementId) {
+      setStreets([]);
+      return;
+    }
+
     try {
       const data = await ApiService.getStreetsBySettlement(settlementId);
       setStreets(data);
+      setError(null);
     } catch (err) {
       console.error("Error loading streets:", err);
+      setError(err);
     }
   };
 
   const handleAdd = () => {
+    // handleAdd: подготовка формы для добавления населенного пункта или улицы
     setEditItem(null);
-    setFormData({ 
-      name: "", 
-      settlementId: tabValue === 1 ? selectedSettlement : "" 
+    setFormData({
+      name: "",
+      settlementId: tabValue === 1 ? selectedSettlement : "",
     });
     setOpen(true);
   };
 
   const handleEdit = (item) => {
+    // handleEdit: открыть диалог редактирования и заполнить форму из выбранного элемента
     setEditItem(item);
     if (tabValue === 0) {
       setFormData({ name: item.name, settlementId: "" });
@@ -85,6 +118,7 @@ const AddressManager = () => {
   };
 
   const handleSave = async () => {
+    // handleSave: сохранить населенный пункт или улицу через API и обновить список
     try {
       if (tabValue === 0) {
         // Населенные пункты
@@ -98,11 +132,11 @@ const AddressManager = () => {
         // Улицы
         const streetData = {
           name: formData.name,
-          settlement_id: formData.settlementId || selectedSettlement
+          settlement_id: formData.settlementId || selectedSettlement,
         };
-        
-        console.log('Creating street with data:', streetData);
-        
+
+        console.log("Creating street with data:", streetData);
+
         if (editItem) {
           await ApiService.updateStreet(editItem.id, streetData);
         } else {
@@ -113,12 +147,15 @@ const AddressManager = () => {
         }
       }
       setOpen(false);
+      setError(null);
     } catch (err) {
       console.error("Error saving:", err);
+      setError(err);
     }
   };
 
   const handleDelete = async (id) => {
+    // handleDelete: подтвердить и удалить населенный пункт или улицу через API
     const confirmText = tabValue === 0 ? "населенный пункт" : "улицу";
     if (window.confirm(`Удалить ${confirmText}?`)) {
       try {
@@ -133,17 +170,19 @@ const AddressManager = () => {
         }
       } catch (err) {
         console.error("Error deleting:", err);
+        setError(err);
       }
     }
   };
 
   const getSettlementName = (settlementId) => {
-    const settlement = settlements.find(s => s.id === settlementId);
+    const settlement = settlements.find((s) => s.id === settlementId);
     return settlement ? settlement.name : "Не найден";
   };
 
   return (
     <Box>
+      {error && <ErrorAlert error={error} onRetry={reloadCurrentData} title="Ошибка загрузки данных из базы" />}
       <Typography variant="h6" sx={{ mb: 3 }}>
         Управление адресами
       </Typography>
@@ -173,12 +212,10 @@ const AddressManager = () => {
       )}
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h6">
-          {tabValue === 0 ? "Населенные пункты" : "Улицы"}
-        </Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<Add />} 
+        <Typography variant="h6">{tabValue === 0 ? "Населенные пункты" : "Улицы"}</Typography>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
           onClick={handleAdd}
           disabled={tabValue === 1 && !selectedSettlement}
         >

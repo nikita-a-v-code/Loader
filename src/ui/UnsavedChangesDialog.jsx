@@ -25,21 +25,6 @@ const UnsavedChangesDialog = ({ open, onConfirm, onCancel, targetRoute }) => {
         <Typography variant="body1" sx={{ mb: 2 }}>
           У вас есть несохраненные данные. При переходе на "{getRouteTitle(targetRoute)}" все изменения будут потеряны.
         </Typography>
-
-        <Box
-          sx={{
-            p: 2,
-            backgroundColor: "warning.light",
-            borderRadius: 1,
-            border: "1px solid",
-            borderColor: "warning.main",
-          }}
-        >
-          <Typography variant="body2" color="warning.dark">
-            <strong>Внимание:</strong> В данный момент функция сохранения не реализована. Все введенные данные будут
-            потеряны при переходе.
-          </Typography>
-        </Box>
       </DialogContent>
 
       <DialogActions>

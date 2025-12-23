@@ -19,39 +19,53 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import ApiService from "../../services/api";
+import ErrorAlert from "../../ui/ErrorAlert";
+
+/*
+  Менеджер типов приборов/устройств.
+  - Загружает устройства, открывает диалог для CRUD операций.
+  - Ошибки сохраняются в `error` и отображаются пользователю.
+*/
 
 const DeviceTypesManager = () => {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [formData, setFormData] = useState({ name: "", password: "" });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadItems();
   }, []);
 
   const loadItems = async () => {
+    // loadItems: загружает список моделей счетчиков/устройств с сервера
     try {
       const data = await ApiService.getDevices();
       setItems(data);
+      setError(null);
     } catch (err) {
       console.error("Error loading device types:", err);
+      setError(err);
     }
   };
 
   const handleAdd = () => {
+    // handleAdd: подготовка формы для добавления новой модели
     setEditItem(null);
     setFormData({ name: "", password: "" });
     setOpen(true);
   };
 
   const handleEdit = (item) => {
+    // handleEdit: открыть форму редактирования и заполнить данными
     setEditItem(item);
     setFormData({ name: item.name, password: item.password });
     setOpen(true);
   };
 
   const handleSave = async () => {
+    // handleSave: отправляет create/update и обновляет список моделей
     try {
       if (editItem) {
         await ApiService.updateDevice(editItem.id, formData);
@@ -61,24 +75,29 @@ const DeviceTypesManager = () => {
 
       loadItems();
       setOpen(false);
+      setError(null);
     } catch (err) {
       console.error("Error saving device type:", err);
+      setError(err);
     }
   };
 
   const handleDelete = async (id) => {
+    // handleDelete: подтверждение и удаление модели по id
     if (window.confirm("Удалить эту модель счетчика?")) {
       try {
         await ApiService.deleteDevice(id);
         loadItems();
       } catch (err) {
         console.error("Error deleting device type:", err);
+        setError(err);
       }
     }
   };
 
   return (
     <Box>
+      {error && <ErrorAlert error={error} onRetry={loadItems} title="Ошибка загрузки данных из базы" />}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h6">Модели счетчиков</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={handleAdd}>

@@ -25,6 +25,13 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import ApiService from "../../services/api";
+import ErrorAlert from "../../ui/ErrorAlert";
+
+/*
+  Менеджер структуры (МПЭС / РКЭС / Мастерские участки).
+  - Загружает три набора данных (`loadMpes`, `loadRkes`, `loadMasterUnits`).
+  - Поддерживает CRUD для каждой вкладки и отображает ошибки через `ErrorAlert`.
+*/
 
 const StructureManager = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -34,6 +41,7 @@ const StructureManager = () => {
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [formData, setFormData] = useState({ name: "", mpes_id: "", rkes_id: "" });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadMpes();
@@ -42,33 +50,52 @@ const StructureManager = () => {
   }, []);
 
   const loadMpes = async () => {
+    // loadMpes: загрузка списка МПЭС из API
     try {
       const data = await ApiService.getMpes();
       setMpes(data);
+      setError(null);
     } catch (err) {
       console.error("Error loading mpes:", err);
+      setError(err);
     }
   };
 
   const loadRkes = async () => {
+    // loadRkes: загрузка списка РКЭС из API
     try {
       const data = await ApiService.getRkes();
       setRkes(data);
+      setError(null);
     } catch (err) {
       console.error("Error loading rkes:", err);
+      setError(err);
     }
   };
 
   const loadMasterUnits = async () => {
+    // loadMasterUnits: загрузка мастерских участков из API
     try {
       const data = await ApiService.getMasterUnits();
       setMasterUnits(data);
+      setError(null);
     } catch (err) {
       console.error("Error loading master units:", err);
+      setError(err);
     }
   };
 
+  // Reload all data sets (used by ErrorAlert retry)
+  const reloadCurrentData = () => {
+    // clear previous error so UI can update while retrying
+    setError(null);
+    loadMpes();
+    loadRkes();
+    loadMasterUnits();
+  };
+
   const handleSave = async () => {
+    // handleSave: создает или обновляет запись для текущей вкладки (CRUD через API)
     try {
       const endpoint = getApiEndpoint();
 
@@ -104,12 +131,15 @@ const StructureManager = () => {
       loadRkes();
       loadMasterUnits();
       setOpen(false);
+      setError(null);
     } catch (err) {
       console.error("Error saving item:", err);
+      setError(err);
     }
   };
 
   const handleDelete = async (id) => {
+    // handleDelete: удаляет запись для текущей вкладки после подтверждения
     if (window.confirm(`Удалить этот ${getTitle().toLowerCase()}?`)) {
       try {
         switch (activeTab) {
@@ -128,6 +158,7 @@ const StructureManager = () => {
         loadMasterUnits();
       } catch (err) {
         console.error("Error deleting item:", err);
+        setError(err);
       }
     }
   };
@@ -172,12 +203,14 @@ const StructureManager = () => {
   };
 
   const handleAdd = () => {
+    // handleAdd: подготовка формы для создания новой записи в текущей вкладке
     setEditItem(null);
     setFormData({ name: "", mpes_id: "", rkes_id: "" });
     setOpen(true);
   };
 
   const handleEdit = (item) => {
+    // handleEdit: открывает форму редактирования и заполняет данными выбранного элемента
     setEditItem(item);
     setFormData({
       name: item.name,
@@ -189,6 +222,7 @@ const StructureManager = () => {
 
   return (
     <Box>
+      {error && <ErrorAlert error={error} onRetry={reloadCurrentData} title="Ошибка загрузки данных из базы" />}
       <Typography variant="h6" sx={{ mb: 3 }}>
         Управление структурой
       </Typography>

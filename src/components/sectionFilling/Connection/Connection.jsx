@@ -35,9 +35,13 @@ const Connection = ({
   const [protocols, setProtocols] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [portsAssigned, setPortsAssigned] = useState(false);
 
   useEffect(() => {
     loadData();
+    if (!portsAssigned) {
+      assignPortsToConnections();
+    }
   }, []);
 
   const loadData = async () => {
@@ -54,6 +58,47 @@ const Connection = ({
       setError(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const assignPortsToConnections = async () => {
+    try {
+      // Проверяем, есть ли уже порты
+      const hasEmptyPorts = connectionPoints.some((point) => !point.port);
+      if (!hasEmptyPorts) {
+        setPortsAssigned(true);
+        return;
+      }
+
+      // Получаем следующий доступный порт
+      const { nextPort } = await ApiService.getNextPort();
+
+      // Обновляем порты для всех точек, у которых порт пустой
+      const newPoints = connectionPoints.map((point, index) => {
+        if (!point.port) {
+          return { ...point, port: String(nextPort + index) };
+        }
+        return point;
+      });
+
+      setConnectionPoints(newPoints);
+      onConnectionChange(newPoints);
+
+      // Сохраняем порты в базу
+      for (let i = 0; i < newPoints.length; i++) {
+        if (newPoints[i].port && !connectionPoints[i].port) {
+          await ApiService.createPort({
+            portNumber: newPoints[i].port,
+            description: `Автоматически назначен для ${consumerData[i]?.consumerName || `Точка ${i + 1}`}`,
+          });
+        }
+      }
+
+      setPortsAssigned(true);
+    } catch (err) {
+      console.error("Error assigning ports:", err);
+      // Даже при ошибке отмечаем как назначенные, чтобы не было повторных попыток
+      setPortsAssigned(true);
     }
   };
 
@@ -309,19 +354,16 @@ const Connection = ({
 
               {/* Поле для вывода сетевого адреса */}
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <TextField
+                <EnSelect
                   id={`networkAddress-${index}`}
-                  label="Сетевой адрес (не редактируемый)"
-                  value={calculateNetworkAddress(index) || connection.networkAddress}
-                  InputProps={{ readOnly: true }}
+                  label="Сетевой адрес"
+                  value={getNetworkAddress(index) || connection.networkAddress}
+                  onChange={(e) => handleFieldChange(index, "networkAddress", e.target.value)}
+                  freeInput={true}
+                  required={true}
                   helperText="Обязательное поле"
                   size="small"
-                  sx={{
-                    width: 210,
-                    "& .MuiInputBase-root": {
-                      height: "55px",
-                    },
-                  }}
+                  sx={{ width: 210 }}
                 />
               </Box>
 

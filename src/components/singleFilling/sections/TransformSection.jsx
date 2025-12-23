@@ -11,7 +11,7 @@ const TransformSection = ({ formData, handleFieldChange }) => {
       </Typography>
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
         <Box>
-          <Typography variant="subtitle1" sx={{ mb: 2, color: "primary.main", fontWeight: "bold" }}>
+          <Typography variant="subtitle1" sx={{ mb: 2, color: "orange", fontWeight: "bold" }}>
             Трансформатор тока (ТТ)
           </Typography>
           <Box sx={{ display: "grid", gap: 2 }}>

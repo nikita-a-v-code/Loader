@@ -116,6 +116,7 @@ const SingleForm = () => {
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [ipAddresses, setIpAddresses] = useState([]);
   const [protocols, setProtocols] = useState([]);
+  const [portsAssigned, setPortsAssigned] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
   const [errorMessages, setErrorMessages] = React.useState({});
 
@@ -129,6 +130,9 @@ const SingleForm = () => {
 
   useEffect(() => {
     loadAllData();
+    if (!portsAssigned) {
+      assignPortToConnections();
+    }
   }, []);
 
   const loadAllData = async () => {
@@ -143,6 +147,7 @@ const SingleForm = () => {
         ApiService.getStatuses(),
         ApiService.getDevices(),
         ApiService.getIpAddresses(),
+        ApiService.getProtocols(),
         ApiService.getProtocols(),
       ]);
 
@@ -208,6 +213,30 @@ const SingleForm = () => {
   const handleFieldChange = (fieldName, value) => {
     const errorKey = fieldName;
 
+    // Валидация networkCode ПЕРЕД обновлением состояния
+    if (fieldName === "networkCode") {
+      const validation = validateNetworkCode(value);
+
+      if (!validation.valid) {
+        setErrorMessages({ ...errorMessages, [errorKey]: validation.message });
+        showError(errorKey);
+
+        // Автокоррекция для неверного кода ПС
+        if (validation.shouldCorrect) {
+          const correctedFormatted = formatNetworkCode(validation.correctedValue);
+          setFormData((prev) => ({ ...prev, [fieldName]: correctedFormatted }));
+        }
+        // Блокируем ввод невалидных символов
+        return;
+      }
+
+      // Форматируем и обновляем значение
+      const formattedValue = formatNetworkCode(value);
+      setFormData((prev) => ({ ...prev, [fieldName]: formattedValue }));
+      clearError(errorKey);
+      return;
+    }
+
     // Валидация полей
     if (fieldName === "house" || fieldName === "apartment") {
       if (!validateField(value, validators.digits, errorKey)) return;
@@ -230,6 +259,18 @@ const SingleForm = () => {
       const formattedValue = validateAndFormatDateField(value, currentValue, errorKey);
       if (formattedValue === null) return;
       value = formattedValue;
+    }
+
+    if (fieldName === "simCardFull") {
+      if (!validateField(value, validators.simCardFull, errorKey)) return;
+    }
+
+    if (fieldName === "simCardShort") {
+      if (!validateField(value, validators.simCardShort, errorKey)) return;
+    }
+
+    if (fieldName === "communicatorNumber") {
+      if (!validateField(value, validators.communicatorNumber, errorKey)) return;
     }
 
     // Обновляем состояние
@@ -268,28 +309,6 @@ const SingleForm = () => {
       if (selectedDevice) {
         setFormData((prev) => ({ ...prev, password: selectedDevice.password }));
       }
-    }
-
-    if (fieldName === "networkCode") {
-      const validation = validateNetworkCode(value);
-
-      if (!validation.valid) {
-        setErrorMessages({ ...errorMessages, [errorKey]: validation.message });
-        showError(errorKey);
-
-        // Автокоррекция для неверного кода ПС
-        if (validation.shouldCorrect) {
-          const correctedFormatted = formatNetworkCode(validation.correctedValue);
-          updateNetworkPoint(fieldName, correctedFormatted);
-        }
-        return;
-      }
-
-      // Форматируем и обновляем значение
-      const formattedValue = formatNetworkCode(value);
-      updateNetworkPoint(fieldName, formattedValue);
-      clearError(errorKey);
-      return;
     }
   };
 
@@ -347,6 +366,37 @@ const SingleForm = () => {
   // Вычисление сетевого адреса
   const getNetworkAddress = () => {
     return calculateNetworkAddress(formData.typeDevice, formData.serialNumber);
+  };
+
+  // Автоматическое назначение порта для одиночной формы
+  const assignPortToConnections = async () => {
+    try {
+      if (portsAssigned) return;
+
+      // Если порт уже заполнен в форме, ничего не делаем
+      if (formData.port && formData.port.toString().trim() !== "") {
+        setPortsAssigned(true);
+        return;
+      }
+
+      // Получаем следующий доступный порт
+      const { nextPort } = await ApiService.getNextPort();
+      const portStr = String(nextPort);
+
+      // Обновляем значение в форме
+      setFormData((prev) => ({ ...prev, port: portStr }));
+
+      // Сохраняем порт в базу данных
+      await ApiService.createPort({
+        portNumber: portStr,
+        description: `Автоматически назначен для ${formData.consumerName || "пользователя"}`,
+      });
+
+      setPortsAssigned(true);
+    } catch (err) {
+      console.error("Error assigning port:", err);
+      setPortsAssigned(true);
+    }
   };
 
   // Проверка обязательных полей
@@ -422,7 +472,12 @@ const SingleForm = () => {
         statuses={statuses}
       />
 
-      <NetworkSection formData={formData} handleFieldChange={handleFieldChange} />
+      <NetworkSection
+        formData={formData}
+        handleFieldChange={handleFieldChange}
+        validationErrors={validationErrors}
+        errorMessages={errorMessages}
+      />
 
       <DeviceSection
         formData={formData}
@@ -439,6 +494,8 @@ const SingleForm = () => {
         ipAddresses={ipAddresses}
         protocols={protocols}
         getNetworkAddress={getNetworkAddress}
+        validationErrors={validationErrors}
+        errorMessages={errorMessages}
       />
 
       {/* Кнопка экспорта */}

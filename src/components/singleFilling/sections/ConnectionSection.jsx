@@ -5,14 +5,38 @@ import TextField from "@mui/material/TextField";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
+import { validators } from "../../../utils/Validation/Validation";
 
-const ConnectionSection = ({ formData, handleFieldChange, ipAddresses, protocols, getNetworkAddress }) => {
+const ConnectionSection = ({
+  formData,
+  handleFieldChange,
+  ipAddresses,
+  protocols,
+  getNetworkAddress,
+  validationErrors = {},
+  errorMessages = {},
+}) => {
   return (
     <Box sx={{ mb: 4, p: 3, border: 1, borderColor: "grey.300", borderRadius: 2 }}>
       <Typography variant="h5" sx={{ mb: 3, color: "primary.main", fontWeight: "bold" }}>
         Параметры подключения
       </Typography>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 2 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={formData.showUSPD}
+              onChange={(e) => handleFieldChange("showUSPD", e.target.checked)}
+              color="primary"
+            />
+          }
+          label={
+            <Typography variant="body1" sx={{ fontWeight: "bold" }}>
+              Опрос через УСПД
+            </Typography>
+          }
+          sx={{ gridColumn: "1 / -1", mb: 2 }}
+        />
         <EnSelect
           label="IP адрес"
           options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
@@ -29,18 +53,22 @@ const ConnectionSection = ({ formData, handleFieldChange, ipAddresses, protocols
           freeInput
           required
         />
-        <TextField
+        <EnSelect
           label="Сетевой адрес"
           value={getNetworkAddress() || formData.networkAddress}
-          InputProps={{ readOnly: true }}
+          onChange={(e) => handleFieldChange("networkAddress", e.target.value)}
+          freeInput
+          disabled
+          sx={{ m: 1, minWidth: 240 }}
         />
         <EnSelect
           label="Номер сим карты (короткий)"
           value={formData.simCardShort}
           onChange={(e) => handleFieldChange("simCardShort", e.target.value)}
-          helperText="Обязательное поле"
           freeInput
           required
+          error={validationErrors.simCardShort}
+          helperText={validationErrors.simCardShort ? validators.simCardShort.message : "Обязательное поле"}
         />
         <EnSelect
           label="Номер сим карты (полный)"
@@ -48,7 +76,8 @@ const ConnectionSection = ({ formData, handleFieldChange, ipAddresses, protocols
           onChange={(e) => handleFieldChange("simCardFull", e.target.value)}
           freeInput
           required
-          helperText="Обязательное поле"
+          error={validationErrors.simCardFull}
+          helperText={validationErrors.simCardFull ? validators.simCardFull.message : "Обязательное поле"}
         />
         <EnSelect
           label="Протокол"
@@ -63,6 +92,8 @@ const ConnectionSection = ({ formData, handleFieldChange, ipAddresses, protocols
           value={formData.communicatorNumber}
           onChange={(e) => handleFieldChange("communicatorNumber", e.target.value)}
           freeInput
+          error={validationErrors.communicatorNumber}
+          helperText={validationErrors.communicatorNumber ? validators.communicatorNumber.message : ""}
         />
         <EnSelect
           label="Номера ком портов"
@@ -88,21 +119,6 @@ const ConnectionSection = ({ formData, handleFieldChange, ipAddresses, protocols
           value={formData.requests}
           onChange={(e) => handleFieldChange("requests", e.target.value)}
           freeInput
-        />
-        <FormControlLabel
-          control={
-            <Switch
-              checked={formData.showUSPD}
-              onChange={(e) => handleFieldChange("showUSPD", e.target.checked)}
-              color="primary"
-            />
-          }
-          label={
-            <Typography variant="body1" sx={{ fontWeight: "bold" }}>
-              Показать поля УСПД
-            </Typography>
-          }
-          sx={{ gridColumn: "1 / -1", mb: 2 }}
         />
         {formData.showUSPD && (
           <>

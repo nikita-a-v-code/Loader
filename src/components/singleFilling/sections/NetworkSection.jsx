@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 
-const NetworkSection = ({ formData, handleFieldChange }) => {
+const NetworkSection = ({ formData, handleFieldChange, validationErrors = {}, errorMessages = {} }) => {
   return (
     <Box sx={{ mb: 4, p: 3, border: 1, borderColor: "grey.300", borderRadius: 2 }}>
       <Typography variant="h5" sx={{ mb: 3, color: "primary.main", fontWeight: "bold" }}>
@@ -16,6 +16,8 @@ const NetworkSection = ({ formData, handleFieldChange }) => {
           value={formData.networkCode}
           onChange={(e) => handleFieldChange("networkCode", e.target.value)}
           freeInput
+          error={validationErrors.networkCode}
+          helperText={validationErrors.networkCode ? errorMessages.networkCode : ""}
         />
         <EnSelect
           label="Номер опоры 0,4 кВ"

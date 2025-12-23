@@ -277,6 +277,19 @@ class ApiService {
   static async sendExcelToEmail(data, email) {
     return this.post("excel/send-email", { data, email });
   }
+
+  /* Методы для портов */
+  static async getNextPort() {
+    return this.get("ports/next");
+  }
+
+  static async createPort(data) {
+    return this.post("ports", data);
+  }
+
+  static async getPorts() {
+    return this.get("ports");
+  }
 }
 
 export default ApiService;
