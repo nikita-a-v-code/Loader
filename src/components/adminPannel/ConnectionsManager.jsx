@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Chip,
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import ApiService from "../../services/api";
@@ -95,14 +96,44 @@ const IpAddressesManager = () => {
     }
   };
 
+  const handleSetDefault = async (id) => {
+    try {
+      await ApiService.setDefaultIpAddress(id);
+      loadItems();
+    } catch (err) {
+      console.error("Error setting default IP:", err);
+      setError(err);
+    }
+  };
+
+  const handleResetDefault = async () => {
+    try {
+      await ApiService.clearDefaultIpAddress();
+      loadItems();
+    } catch (err) {
+      console.error("Error clearing default IP:", err);
+      setError(err);
+    }
+  };
+
   return (
     <Box>
       {error && <ErrorAlert error={error} onRetry={loadItems} title="Ошибка загрузки данных из базы" />}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h6">IP адреса</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleAdd}>
-          Добавить
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="warning"
+            onClick={handleResetDefault}
+            disabled={!items.some((it) => it.is_default)}
+          >
+            Сбросить по умолчанию
+          </Button>
+          <Button variant="contained" startIcon={<Add />} onClick={handleAdd}>
+            Добавить
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper}>
@@ -111,6 +142,7 @@ const IpAddressesManager = () => {
             <TableRow>
               <TableCell>ID</TableCell>
               <TableCell>IP адрес</TableCell>
+              <TableCell>По умолчанию (Excel)</TableCell>
               <TableCell align="right">Действия</TableCell>
             </TableRow>
           </TableHead>
@@ -119,6 +151,15 @@ const IpAddressesManager = () => {
               <TableRow key={item.id}>
                 <TableCell>{item.id}</TableCell>
                 <TableCell>{item.address}</TableCell>
+                <TableCell>
+                  {item.is_default ? (
+                    <Chip label="Используется" color="success" size="small" />
+                  ) : (
+                    <Button size="small" variant="outlined" onClick={() => handleSetDefault(item.id)}>
+                      Сделать по умолчанию
+                    </Button>
+                  )}
+                </TableCell>
                 <TableCell align="right">
                   <IconButton onClick={() => handleEdit(item)} color="primary">
                     <Edit />

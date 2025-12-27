@@ -28,6 +28,14 @@ const TransformSection = ({ formData, handleFieldChange }) => {
               helperText="Обязательное поле"
               freeInput
               required
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    borderColor: formData.ttCoeff ? "success.main" : "error.main",
+                    borderWidth: "3px",
+                  },
+                },
+              }}
             />
             {["A", "B", "C"].map((phase) => (
               <Box key={phase} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
@@ -65,6 +73,14 @@ const TransformSection = ({ formData, handleFieldChange }) => {
               helperText="Обязательное поле"
               freeInput
               required
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    borderColor: formData.tnCoeff ? "success.main" : "error.main",
+                    borderWidth: "3px",
+                  },
+                },
+              }}
             />
             {["A", "B", "C"].map((phase) => (
               <Box key={phase} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>

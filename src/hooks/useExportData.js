@@ -11,6 +11,7 @@ export const useExportData = ({
   connectionData,
   calculateNetworkAddress,
   calculateFinalCoeff,
+  includePort = false,
 }) => {
   const exportData = useMemo(
     () => {
@@ -92,7 +93,7 @@ export const useExportData = ({
           simCardFull: connectionData[i]?.simCardFull || "",
           simCardShort: connectionData[i]?.simCardShort || "",
           ipAddress: connectionData[i]?.ipAddress || "",
-          port: connectionData[i]?.port || "",
+          ...(includePort ? { port: connectionData[i]?.port || "" } : {}),
           communicatorNumber: connectionData[i]?.communicatorNumber || "",
           protocol: connectionData[i]?.protocol || "",
           finalCoeff: calculateFinalCoeff(i) || "",
@@ -124,6 +125,7 @@ export const useExportData = ({
       connectionData,
       calculateNetworkAddress,
       calculateFinalCoeff,
+      includePort,
     ]
   );
 

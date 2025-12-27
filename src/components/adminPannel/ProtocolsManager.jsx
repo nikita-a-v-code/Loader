@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Chip,
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import ApiService from "../../services/api";
@@ -34,6 +35,8 @@ const ProtocolsManager = () => {
   const [editItem, setEditItem] = useState(null);
   const [formData, setFormData] = useState({ name: "" });
   const [error, setError] = useState(null);
+
+  const defaultProtocol = items.find((it) => it.is_default)?.name || "";
 
   useEffect(() => {
     loadItems();
@@ -95,14 +98,39 @@ const ProtocolsManager = () => {
     }
   };
 
+  const handleSetDefault = async (id) => {
+    try {
+      await ApiService.setDefaultProtocol(id);
+      loadItems();
+    } catch (err) {
+      console.error("Error setting default protocol:", err);
+      setError(err);
+    }
+  };
+
+  const handleResetDefault = async () => {
+    try {
+      await ApiService.clearDefaultProtocol();
+      loadItems();
+    } catch (err) {
+      console.error("Error clearing default protocol:", err);
+      setError(err);
+    }
+  };
+
   return (
     <Box>
       {error && <ErrorAlert error={error} onRetry={loadItems} title="Ошибка загрузки данных из базы" />}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h6">Протоколы</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleAdd}>
-          Добавить
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button variant="outlined" color="warning" onClick={handleResetDefault} disabled={!defaultProtocol}>
+            Сбросить по умолчанию
+          </Button>
+          <Button variant="contained" startIcon={<Add />} onClick={handleAdd}>
+            Добавить
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper}>
@@ -111,6 +139,7 @@ const ProtocolsManager = () => {
             <TableRow>
               <TableCell>ID</TableCell>
               <TableCell>Название</TableCell>
+              <TableCell>По умолчанию (Excel)</TableCell>
               <TableCell align="right">Действия</TableCell>
             </TableRow>
           </TableHead>
@@ -119,6 +148,15 @@ const ProtocolsManager = () => {
               <TableRow key={item.id}>
                 <TableCell>{item.id}</TableCell>
                 <TableCell>{item.name}</TableCell>
+                <TableCell>
+                  {item.is_default ? (
+                    <Chip label="Используется" color="success" size="small" />
+                  ) : (
+                    <Button size="small" variant="outlined" onClick={() => handleSetDefault(item.id)}>
+                      Сделать по умолчанию
+                    </Button>
+                  )}
+                </TableCell>
                 <TableCell align="right">
                   <IconButton onClick={() => handleEdit(item)} color="primary">
                     <Edit />

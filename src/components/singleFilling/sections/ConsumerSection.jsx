@@ -17,6 +17,14 @@ const ConsumerSection = ({ formData, handleFieldChange, abonentTypes, statuses }
           helperText="Обязательное поле"
           freeInput
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.consumerName ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Наименование точки поставки"
@@ -37,6 +45,14 @@ const ConsumerSection = ({ formData, handleFieldChange, abonentTypes, statuses }
           onChange={(e) => handleFieldChange("subscriberType", e.target.value)}
           helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.subscriberType ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Статус счета"
@@ -45,6 +61,14 @@ const ConsumerSection = ({ formData, handleFieldChange, abonentTypes, statuses }
           onChange={(e) => handleFieldChange("accountStatus", e.target.value)}
           helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.accountStatus ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
       </Box>
     </Box>

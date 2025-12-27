@@ -2,6 +2,11 @@ import * as React from "react";
 import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ErrorAlert from "../../ui/ErrorAlert";
 import ApiService from "../../services/api";
@@ -119,6 +124,9 @@ const SingleForm = () => {
   const [portsAssigned, setPortsAssigned] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
   const [errorMessages, setErrorMessages] = React.useState({});
+  const [email, setEmail] = useState("");
+  const [emailDialog, setEmailDialog] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
 
   const {
     errors: validationErrors,
@@ -130,9 +138,6 @@ const SingleForm = () => {
 
   useEffect(() => {
     loadAllData();
-    if (!portsAssigned) {
-      assignPortToConnections();
-    }
   }, []);
 
   const loadAllData = async () => {
@@ -163,6 +168,97 @@ const SingleForm = () => {
       setError(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    ApiService.getDefaultEmail()
+      .then((resp) => {
+        if (active && resp?.defaultEmail) {
+          setEmail(resp.defaultEmail);
+        }
+      })
+      .catch((err) => {
+        console.error("Не удалось получить дефолтный email:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Преобразование s1, s2, s3 в имена для экспорта
+  // Универсальное преобразование: если в formData хранится id, ищем name по id, если name — используем name
+  const getExportFormData = (includePort = false) => {
+    // МПЭС
+    let mpesName = formData.s1;
+    if (mpes.length > 0) {
+      const foundMpes = mpes.find((m) => m.id === formData.s1 || m.name === formData.s1);
+      if (foundMpes) mpesName = foundMpes.name;
+    }
+
+    // РКЭС
+    let rkesName = formData.s2;
+    let selectedMpes = mpes.find((m) => m.id === formData.s1 || m.name === formData.s1);
+    if (selectedMpes && rkesOptions[selectedMpes.id]) {
+      const foundRkes = rkesOptions[selectedMpes.id].find((r) => r.id === formData.s2 || r.name === formData.s2);
+      if (foundRkes) rkesName = foundRkes.name;
+    }
+
+    // МУ
+    let muName = formData.s3;
+    let selectedRkes = null;
+    if (selectedMpes && rkesOptions[selectedMpes.id]) {
+      selectedRkes = rkesOptions[selectedMpes.id].find((r) => r.id === formData.s2 || r.name === formData.s2);
+      if (selectedRkes && muOptions[selectedRkes.id]) {
+        const foundMu = muOptions[selectedRkes.id].find((mu) => mu.id === formData.s3 || mu.name === formData.s3);
+        if (foundMu) muName = foundMu.name;
+      }
+    }
+
+    // Собираем объект для экспорта с правильными ключами
+    const exportObj = {
+      ...formData,
+      mpes: mpesName || "",
+      rkes: rkesName || "",
+      masterUnit: muName || "",
+      deviceModel: formData.typeDevice || "",
+      networkAddress: getNetworkAddress() || "",
+      ...(includePort ? {} : { port: undefined }), // Если не includePort, удаляем port
+    };
+    // Удаляем s1, s2, s3, typeDevice чтобы не было мусора
+    delete exportObj.s1;
+    delete exportObj.s2;
+    delete exportObj.s3;
+    delete exportObj.typeDevice;
+    if (!includePort) delete exportObj.port;
+    return exportObj;
+  };
+
+  const handleSendToEmail = async () => {
+    if (!email || !email.includes("@")) {
+      alert("Введите корректный email адрес");
+      return;
+    }
+
+    try {
+      let exportObj;
+      if (!portsAssigned) {
+        const port = await assignPortToConnections();
+        exportObj = { ...getExportFormData(true), port };
+      } else {
+        exportObj = getExportFormData(true);
+      }
+      setEmailSending(true);
+      await ApiService.sendExcelToEmail([exportObj], email);
+      alert(`Файл успешно отправлен на ${email}`);
+      setEmailDialog(false);
+      setEmail("");
+    } catch (error) {
+      console.error("Ошибка при отправке на email:", error);
+      alert("Ошибка при отправке на email");
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -371,20 +467,25 @@ const SingleForm = () => {
   // Автоматическое назначение порта для одиночной формы
   const assignPortToConnections = async () => {
     try {
-      if (portsAssigned) return;
+      if (portsAssigned) return formData.port;
 
       // Если порт уже заполнен в форме, ничего не делаем
       if (formData.port && formData.port.toString().trim() !== "") {
         setPortsAssigned(true);
-        return;
+        return formData.port;
       }
 
       // Получаем следующий доступный порт
       const { nextPort } = await ApiService.getNextPort();
       const portStr = String(nextPort);
 
-      // Обновляем значение в форме
-      setFormData((prev) => ({ ...prev, port: portStr }));
+      // Обновляем значение в форме и ждем применения
+      await new Promise((resolve) => {
+        setFormData((prev) => {
+          resolve();
+          return { ...prev, port: portStr };
+        });
+      });
 
       // Сохраняем порт в базу данных
       await ApiService.createPort({
@@ -393,9 +494,11 @@ const SingleForm = () => {
       });
 
       setPortsAssigned(true);
+      return portStr;
     } catch (err) {
       console.error("Error assigning port:", err);
       setPortsAssigned(true);
+      return formData.port;
     }
   };
 
@@ -416,7 +519,6 @@ const SingleForm = () => {
       formData.ttCoeff,
       formData.tnCoeff,
       formData.ipAddress,
-      formData.port,
       formData.simCardShort || formData.simCardFull,
       formData.protocol,
     ];
@@ -427,7 +529,7 @@ const SingleForm = () => {
 
   const handleExport = async () => {
     try {
-      const exportData = [formData];
+      const exportData = [getExportFormData(false)];
       await ApiService.exportToExcel(exportData);
     } catch (error) {
       console.error("Ошибка при выгрузке в Excel:", error);
@@ -506,9 +608,42 @@ const SingleForm = () => {
           disabled={!allRequiredFilled}
           color={allRequiredFilled ? "success" : "primary"}
           size="large"
+          sx={{ mr: 2 }}
         >
           Выгрузить в Excel
         </Button>
+        <Button
+          variant="contained"
+          onClick={() => setEmailDialog(true)}
+          color={allRequiredFilled ? "success" : "primary"}
+          disabled={!allRequiredFilled}
+        >
+          Отправить на Email
+        </Button>
+        {/* Диалог для ввода email */}
+        <Dialog open={emailDialog} onClose={() => setEmailDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Отправить Excel файл на электронную почту</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Email адрес"
+              type="email"
+              fullWidth
+              variant="outlined"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@mail.com"
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEmailDialog(false)}>Отмена</Button>
+            <Button onClick={handleSendToEmail} variant="contained" disabled={emailSending}>
+              {emailSending ? "Отправляем..." : "Отправить"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Box>
   );

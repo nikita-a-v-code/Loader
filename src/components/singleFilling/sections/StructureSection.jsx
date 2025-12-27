@@ -17,24 +17,48 @@ const StructureSection = ({ formData, handleFieldChange, mpes, getRkesOptions, g
           onChange={(e) => handleFieldChange("s1", e.target.value)}
           helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.s1 ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="РКЭС"
           options={getRkesOptions()}
           value={formData.s2}
           onChange={(e) => handleFieldChange("s2", e.target.value)}
-          helperText="Обязательное поле"
           disabled={!formData.s1}
+          helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.s2 ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Мастерский участок"
           options={getMuOptions()}
           value={formData.s3}
           onChange={(e) => handleFieldChange("s3", e.target.value)}
-          helperText="Обязательное поле"
           disabled={!formData.s1 || !formData.s2}
+          helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.s3 ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
       </Box>
     </Box>

@@ -24,33 +24,37 @@ const AddressSection = ({
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
           gap: 2,
-          alignItems: "start", // Изменено с "start" на "center"
+          alignItems: "stretch",
         }}
       >
         {/* Населенный пункт с кнопкой добавления */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-            <Box sx={{ flex: 1 }}>
-              <EnSelect
-                label="Населенный пункт"
-                options={settl.map((s) => s.name)}
-                value={formData.settlement}
-                onChange={(e) => handleFieldChange("settlement", e.target.value)}
-                helperText="Обязательное поле"
-                searchable
-                required
-              />
-            </Box>
-            <Box sx={{ mt: 2.5, mb: "auto" }}>
-              <AddNewElement
-                onAdd={createNewSettlement}
-                title="Добавить населенный пункт"
-                label="Название населенного пункта"
-                placeholder="например: г. Москва"
-                validateSettlement={true}
-                existingItems={settl}
-              />
-            </Box>
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1, alignItems: "start", mt: "8px" }}>
+          <EnSelect
+            label="Населенный пункт"
+            options={settl.map((s) => s.name)}
+            value={formData.settlement}
+            onChange={(e) => handleFieldChange("settlement", e.target.value)}
+            helperText="Обязательное поле"
+            searchable
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.settlement ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
+              },
+            }}
+          />
+          <Box sx={{ mt: "12px" }}>
+            <AddNewElement
+              onAdd={createNewSettlement}
+              title="Добавить населенный пункт"
+              label="Название населенного пункта"
+              placeholder="например: г. Москва"
+              validateSettlement={true}
+              existingItems={settl}
+            />
           </Box>
         </Box>
 
@@ -65,30 +69,34 @@ const AddressSection = ({
         </Box>
 
         {/* Улица с кнопкой добавления */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-            <Box sx={{ flex: 1 }}>
-              <EnSelect
-                label="Улица"
-                options={getStreetsForSettlement(formData.settlement)}
-                value={formData.street}
-                onChange={(e) => handleFieldChange("street", e.target.value)}
-                helperText="Обязательное поле"
-                disabled={!formData.settlement}
-                searchable
-                required
-              />
-            </Box>
-            <Box sx={{ mt: 2.5, mb: "auto" }}>
-              <AddNewElement
-                onAdd={(name) => createNewStreet(name, formData.settlement)}
-                title="Добавить улицу"
-                label="Название улицы"
-                placeholder="например: ул. Ленина"
-                validateStreet={true}
-                disabled={!formData.settlement}
-              />
-            </Box>
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1, alignItems: "start", mt: "8px" }}>
+          <EnSelect
+            label="Улица"
+            options={getStreetsForSettlement(formData.settlement)}
+            value={formData.street}
+            onChange={(e) => handleFieldChange("street", e.target.value)}
+            helperText="Обязательное поле"
+            disabled={!formData.settlement}
+            searchable
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.street ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
+              },
+            }}
+          />
+          <Box sx={{ mt: "12px" }}>
+            <AddNewElement
+              onAdd={(name) => createNewStreet(name, formData.settlement)}
+              title="Добавить улицу"
+              label="Название улицы"
+              placeholder="например: ул. Ленина"
+              validateStreet={true}
+              disabled={!formData.settlement}
+            />
           </Box>
         </Box>
 

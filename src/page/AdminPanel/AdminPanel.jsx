@@ -6,7 +6,7 @@ import StructureManager from "../../components/adminPannel/StructureManager";
 import DevicesManager from "../../components/adminPannel/DevicesManager";
 import ConnectionsManager from "../../components/adminPannel/ConnectionsManager";
 import ProtocolsManager from "../../components/adminPannel/ProtocolsManager";
-import ApiConfigManager from "../../components/adminPannel/ApiConfigManager";
+import Settings from "../../components/adminPannel/Settings";
 import Navbar from "../../components/common/Navbar/Navbar";
 import Sidebar from "../../components/common/Sidebar/Sidebar";
 import AddressManager from "../../components/adminPannel/AddressManager";
@@ -26,14 +26,14 @@ const AdminPanel = () => {
     { label: "IP адреса", component: <ConnectionsManager /> },
     { label: "Протоколы", component: <ProtocolsManager /> },
     { label: "Населенные пункты/Улицы", component: <AddressManager /> },
-    { label: "Настройки API", component: <ApiConfigManager /> },
+    { label: "Настройки", component: <Settings /> },
   ];
 
   return (
     <>
       <Navbar />
       <Sidebar />
-      <Box sx={{ p: 3, ml: '240px', mt: '64px' }}>
+      <Box sx={{ p: 3, ml: "240px", mt: "64px" }}>
         <Card>
           <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
             <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">

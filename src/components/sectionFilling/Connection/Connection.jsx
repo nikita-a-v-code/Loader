@@ -39,9 +39,7 @@ const Connection = ({
 
   useEffect(() => {
     loadData();
-    if (!portsAssigned) {
-      assignPortsToConnections();
-    }
+    assignPortsOnMount();
   }, []);
 
   const loadData = async () => {
@@ -61,43 +59,52 @@ const Connection = ({
     }
   };
 
-  const assignPortsToConnections = async () => {
+  const assignPortsOnMount = async () => {
     try {
       // Проверяем, есть ли уже порты
       const hasEmptyPorts = connectionPoints.some((point) => !point.port);
-      if (!hasEmptyPorts) {
-        setPortsAssigned(true);
-        return;
-      }
+      if (!hasEmptyPorts) return;
 
       // Получаем следующий доступный порт
       const { nextPort } = await ApiService.getNextPort();
 
-      // Обновляем порты для всех точек, у которых порт пустой
+      // Обновляем порты для всех точек, у которых порт пустой, но НЕ сохраняем в базу
       const newPoints = connectionPoints.map((point, index) => {
         if (!point.port) {
-          return { ...point, port: String(nextPort + index) };
+          return { ...point, port: String(nextPort + index), portSaved: false };
         }
         return point;
       });
 
       setConnectionPoints(newPoints);
       onConnectionChange(newPoints);
+    } catch (err) {
+      console.error("Error assigning ports on mount:", err);
+    }
+  };
 
-      // Сохраняем порты в базу
-      for (let i = 0; i < newPoints.length; i++) {
-        if (newPoints[i].port && !connectionPoints[i].port) {
+  const assignPortsToConnections = async () => {
+    try {
+      if (portsAssigned) return;
+
+      // Сохраняем порты в базу только для тех, у которых порт есть
+      for (let i = 0; i < connectionPoints.length; i++) {
+        if (connectionPoints[i].port && !connectionPoints[i].portSaved) {
           await ApiService.createPort({
-            portNumber: newPoints[i].port,
+            portNumber: connectionPoints[i].port,
             description: `Автоматически назначен для ${consumerData[i]?.consumerName || `Точка ${i + 1}`}`,
           });
+          // Отмечаем, что порт сохранен
+          const newPoints = [...connectionPoints];
+          newPoints[i] = { ...newPoints[i], portSaved: true };
+          setConnectionPoints(newPoints);
+          onConnectionChange(newPoints);
         }
       }
 
       setPortsAssigned(true);
     } catch (err) {
-      console.error("Error assigning ports:", err);
-      // Даже при ошибке отмечаем как назначенные, чтобы не было повторных попыток
+      console.error("Error saving ports:", err);
       setPortsAssigned(true);
     }
   };
@@ -126,6 +133,7 @@ const Connection = ({
         communicatorNumber: connectionData[i]?.communicatorNumber || "",
         comPorts: connectionData[i]?.comPorts || "",
         port: connectionData[i]?.port || "",
+        portSaved: false, // Флаг, сохранен ли порт в базе
         advSettings: connectionData[i]?.advSettings || "",
         nameConnection: connectionData[i]?.nameConnection || "",
         requests: connectionData[i]?.requests || "",
@@ -165,8 +173,24 @@ const Connection = ({
 
   const { errors: validationErrors, showError, clearError, validateField } = useValidationErrors();
   const [emailDialog, setEmailDialog] = useState(false);
-  const [email, setEmail] = useState("nikitaav_oit@komenergo.kirov.ru");
+  const [email, setEmail] = useState("");
   const [emailSending, setEmailSending] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    ApiService.getDefaultEmail()
+      .then((resp) => {
+        if (active && resp?.defaultEmail) {
+          setEmail(resp.defaultEmail);
+        }
+      })
+      .catch((err) => {
+        console.error("Не удалось получить дефолтный email:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleFieldChange = (pointIndex, fieldName, value) => {
     const errorKey = `${fieldName}-${pointIndex}`;
@@ -192,6 +216,7 @@ const Connection = ({
     newPoints[pointIndex] = {
       ...newPoints[pointIndex],
       [fieldName]: value,
+      ...(fieldName === "port" ? { portSaved: false } : {}), // Если порт изменен, отметить как не сохраненный
     };
     setConnectionPoints(newPoints);
     onConnectionChange(newPoints);
@@ -223,7 +248,7 @@ const Connection = ({
   };
 
   /* Используем хук для получения данных экспорта */
-  const exportData = useExportData({
+  const exportDataWithoutPort = useExportData({
     pointsCount,
     structureData,
     addressData,
@@ -234,11 +259,26 @@ const Connection = ({
     connectionData: connectionPoints,
     calculateNetworkAddress: getNetworkAddress,
     calculateFinalCoeff,
+    includePort: false,
+  });
+
+  const exportDataWithPort = useExportData({
+    pointsCount,
+    structureData,
+    addressData,
+    consumerData,
+    networkData,
+    deviceData,
+    transformData,
+    connectionData: connectionPoints,
+    calculateNetworkAddress: getNetworkAddress,
+    calculateFinalCoeff,
+    includePort: true,
   });
 
   const handleExportToExcel = async () => {
     try {
-      await ApiService.exportToExcel(exportData);
+      await ApiService.exportToExcel(exportDataWithoutPort);
     } catch (error) {
       console.error("Ошибка при выгрузке в Excel:", error);
       alert("Ошибка при создании Excel файла");
@@ -253,7 +293,10 @@ const Connection = ({
 
     try {
       setEmailSending(true);
-      await ApiService.sendExcelToEmail(exportData, email);
+      if (!portsAssigned) {
+        assignPortsToConnections();
+      }
+      await ApiService.sendExcelToEmail(exportDataWithPort, email);
       alert(`Файл успешно отправлен на ${email}`);
       setEmailDialog(false);
       setEmail("");

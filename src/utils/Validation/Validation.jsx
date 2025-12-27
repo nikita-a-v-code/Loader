@@ -4,27 +4,31 @@ import { useState } from "react";
 export const validators = {
   digits: {
     regex: /^\d*$/,
-    message: "Только цифры"
+    message: "Только цифры",
   },
   uppercaseLetters: {
     regex: /^[А-ЯA-Z]*$/,
-    message: "Только заглавные буквы"
+    message: "Только заглавные буквы",
   },
   twoDigits: {
     regex: /^\d{0,2}$/,
-    message: "Максимум 2 цифры"
+    message: "Максимум 2 цифры",
   },
   dateFormat: {
     regex: /^[\d.]*$/,
-    message: "Формат ДД.ММ.ГГГГ"
+    message: "Формат ДД.ММ.ГГГГ",
   },
   serialNumber: {
     regex: /^\d*$/,
-    message: "Только цифры"
+    message: "Только цифры",
   },
   simCardShort: {
     regex: /^\d*$/,
-    message: "Только цифры"
+    message: "До 5 цифр",
+    validate: (value) => {
+      if (value.length > 5) return false;
+      return /^\d*$/.test(value);
+    },
   },
   simCardFull: {
     regex: /^\d*$/,
@@ -33,24 +37,24 @@ export const validators = {
       if (value.length > 11) return false;
       if (value.length >= 2 && !value.startsWith("89")) return false;
       return /^\d*$/.test(value);
-    }
+    },
   },
   port: {
     regex: /^\d*$/,
-    message: "Только цифры"
+    message: "Только цифры",
   },
   communicatorNumber: {
     regex: /^\d*$/,
-    message: "Только цифры"
+    message: "Только цифры",
   },
   coefficients: {
     regex: /^\d*$/,
-    message: "Только цифры"
+    message: "Только цифры",
   },
   intervals: {
     regex: /^\d{0,2}$/,
-    message: "Только цифры, максимум 2"
-  }
+    message: "Только цифры, максимум 2",
+  },
 };
 
 // Хук для управления ошибками валидации
@@ -58,7 +62,7 @@ export const useValidationErrors = () => {
   const [errors, setErrors] = useState({});
 
   const setError = (key, hasError) => {
-    setErrors(prev => ({ ...prev, [key]: hasError }));
+    setErrors((prev) => ({ ...prev, [key]: hasError }));
   };
 
   const showError = (key) => {
@@ -78,12 +82,12 @@ export const useValidationErrors = () => {
     return validateAndFormatDate(value, currentValue, errorKey, showError, clearError);
   };
 
-  return { 
-    errors, 
-    showError, 
-    clearError, 
-    validateField, 
-    validateAndFormatDateField 
+  return {
+    errors,
+    showError,
+    clearError,
+    validateField,
+    validateAndFormatDateField,
   };
 };
 
@@ -122,7 +126,7 @@ export const validateAndFormatDate = (value, currentValue, errorKey, showError, 
     showError(errorKey);
     return null;
   }
-  
+
   clearError(errorKey);
   return formatDate(value, currentValue);
 };

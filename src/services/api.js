@@ -190,6 +190,14 @@ class ApiService {
     return this.delete(`ip/${id}`);
   }
 
+  static async setDefaultIpAddress(id) {
+    return this.post(`ip/${id}/default`);
+  }
+
+  static async clearDefaultIpAddress() {
+    return this.post("ip/default/clear");
+  }
+
   /* Методы для протоколов */
   static async getProtocols() {
     return this.get("protocols");
@@ -205,6 +213,14 @@ class ApiService {
 
   static async deleteProtocol(id) {
     return this.delete(`protocols/${id}`);
+  }
+
+  static async setDefaultProtocol(id) {
+    return this.post(`protocols/${id}/default`);
+  }
+
+  static async clearDefaultProtocol() {
+    return this.post("protocols/default/clear");
   }
 
   /* Методы для населенных пунктов */
@@ -276,6 +292,35 @@ class ApiService {
   /* Метод для отправки Excel на email */
   static async sendExcelToEmail(data, email) {
     return this.post("excel/send-email", { data, email });
+  }
+
+  /* Настройки */
+  static async getEmails() {
+    return this.get("settings/emails");
+  }
+
+  static async createEmail(data) {
+    return this.post("settings/emails", data);
+  }
+
+  static async updateEmail(id, data) {
+    return this.put(`settings/emails/${id}`, data);
+  }
+
+  static async deleteEmail(id) {
+    return this.delete(`settings/emails/${id}`);
+  }
+
+  static async setDefaultEmailById(id) {
+    return this.post(`settings/emails/${id}/default`);
+  }
+
+  static async getDefaultEmail() {
+    return this.get("settings/default-email");
+  }
+
+  static async setDefaultEmail(defaultEmail) {
+    return this.post("settings/default-email", { defaultEmail });
   }
 
   /* Методы для портов */

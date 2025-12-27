@@ -44,14 +44,30 @@ const ConnectionSection = ({
           onChange={(e) => handleFieldChange("ipAddress", e.target.value)}
           helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.ipAddress ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Порт"
           value={formData.port}
           onChange={(e) => handleFieldChange("port", e.target.value)}
-          helperText="Обязательное поле"
+          helperText="Автозаполнение при отправке на почту или введите нужное"
           freeInput
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: "success.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Сетевой адрес"
@@ -59,7 +75,14 @@ const ConnectionSection = ({
           onChange={(e) => handleFieldChange("networkAddress", e.target.value)}
           freeInput
           disabled
-          sx={{ m: 1, minWidth: 240 }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.protocol ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Номер сим карты (короткий)"
@@ -69,6 +92,14 @@ const ConnectionSection = ({
           required
           error={validationErrors.simCardShort}
           helperText={validationErrors.simCardShort ? validators.simCardShort.message : "Обязательное поле"}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.simCardShort || formData.simCardFull ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Номер сим карты (полный)"
@@ -78,6 +109,14 @@ const ConnectionSection = ({
           required
           error={validationErrors.simCardFull}
           helperText={validationErrors.simCardFull ? validators.simCardFull.message : "Обязательное поле"}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.simCardShort || formData.simCardFull ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Протокол"
@@ -86,6 +125,14 @@ const ConnectionSection = ({
           onChange={(e) => handleFieldChange("protocol", e.target.value)}
           helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.protocol ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Номер коммуникатора (для РиМ)"

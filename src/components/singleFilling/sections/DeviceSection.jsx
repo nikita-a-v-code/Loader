@@ -18,6 +18,14 @@ const DeviceSection = ({ formData, handleFieldChange, deviceTypes, validationErr
           onChange={(e) => handleFieldChange("typeDevice", e.target.value)}
           helperText="Обязательное поле"
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.typeDevice ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Серийный номер"
@@ -27,6 +35,14 @@ const DeviceSection = ({ formData, handleFieldChange, deviceTypes, validationErr
           required
           error={validationErrors.serialNumber}
           helperText={validationErrors.serialNumber ? "Только цифры" : "Обязательное поле"}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.serialNumber ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Кол-во фаз"
@@ -77,6 +93,14 @@ const DeviceSection = ({ formData, handleFieldChange, deviceTypes, validationErr
           helperText="Обязательное поле"
           freeInput
           required
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.password ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
         />
         <EnSelect
           label="Примечание"
