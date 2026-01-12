@@ -28,7 +28,7 @@ import ErrorAlert from "../../ui/ErrorAlert";
   - При ошибках показывает `ErrorAlert` и сохраняет ошибку в `error`.
 */
 
-const IpAddressesManager = () => {
+const ConnectionManager = () => {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -199,4 +199,4 @@ const IpAddressesManager = () => {
   );
 };
 
-export default IpAddressesManager;
+export default ConnectionManager;

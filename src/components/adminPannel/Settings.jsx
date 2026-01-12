@@ -23,6 +23,8 @@ import {
   DialogActions,
 } from "@mui/material";
 import { Save, Refresh, Add, Edit, Delete } from "@mui/icons-material";
+import ConnectionManager from "./ConnectionsManager";
+import ProtocolsManager from "./ProtocolsManager";
 import ApiService from "../../services/api";
 
 const Settings = () => {
@@ -245,7 +247,7 @@ const Settings = () => {
       <Card>
         <CardContent>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-            <Typography variant="subtitle1">Email по умолчанию для отправок</Typography>
+            <Typography variant="h6">Email по умолчанию для отправок</Typography>
             {defaultEmail && <Chip label={defaultEmail} color="primary" variant="outlined" />}
           </Stack>
 
@@ -301,6 +303,16 @@ const Settings = () => {
               {emailMessage}
             </Alert>
           )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <ConnectionManager />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <ProtocolsManager />
         </CardContent>
       </Card>
 

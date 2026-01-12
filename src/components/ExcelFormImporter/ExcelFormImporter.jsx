@@ -2,199 +2,64 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Box, Typography, Button, Alert, CircularProgress } from "@mui/material";
 import ApiService from "../../services/api";
 import useExcelData from "./hooks/useExcelData";
-import { getSimilarOptions, normalizeStreet } from "./utils/fuzzySearch";
+import useEmailSender from "./hooks/useEmailSender";
 import ErrorCard from "./components/ErrorCard";
-import EmailDialog from "./components/EmailDialog";
-import { validateNetworkCode } from "../../utils/networkCodeValidation";
+import EmailSenderDialog from "../../ui/EmailSenderDialog";
+import { parseExcelFile } from "./utils/excelParser";
+import {
+  NETWORK_CODE_FIELDS,
+  SIM_CARD_FIELDS,
+  validateNetworkCodeField,
+  getSimFieldErrors,
+  getTransformerFieldErrors,
+  validateSimpleField,
+} from "./utils/validationHelpers";
 
 /**
- * Поля сетевого кода для inline-валидации
- */
-const NETWORK_CODE_FIELDS = [
-  "Код ПС ((220)110/35-10(6)кВ",
-  "Номер фидера 10(6)(3) кВ",
-  "Номер ТП 10(6)/0,4 кВ",
-  "Номер фидера 0,4 кВ",
-  "Код потребителя 3х-значный",
-];
-
-/**
- * Поля SIM-карты (логика: заполнено хотя бы одно)
- */
-const SIM_CARD_FIELDS = ["Номер сим карты (короткий)", "Номер сим карты (полный)"];
-
-/**
- * Валидация отдельного поля сетевого кода
- * @param field - название поля
- * @param value - значение поля
- * @param row - вся строка данных (для проверки связанных полей)
- * @param touchedFields - затронутые пользователем поля
- */
-const validateNetworkCodeField = (field, value, row = {}, touchedFields = new Set()) => {
-  const trimmed = (value || "").trim();
-  const original = value || "";
-
-  // Проверяем, есть ли значение хотя бы в одном из полей сетевого кода или было ли затронуто
-  const hasAnyNetworkCodeValue = NETWORK_CODE_FIELDS.some((f) => {
-    const fieldValue = row[f];
-    return (fieldValue && fieldValue.trim() !== "") || touchedFields.has(f);
-  });
-
-  // Если ни одно поле не заполнено и не затронуто - всё ок
-  if (!hasAnyNetworkCodeValue && !trimmed) return null;
-
-  // Проверка на пробелы
-  if (original.includes(" ")) {
-    return "Пробелы не допускаются";
-  }
-
-  // Если какое-то поле заполнено/затронуто, но текущее пустое - ошибка
-  if (hasAnyNetworkCodeValue && !trimmed) {
-    return "Заполните поле";
-  }
-
-  // Проверка формата значения
-  switch (field) {
-    case "Код ПС ((220)110/35-10(6)кВ":
-      if (!/^\d*$/.test(trimmed)) return "Только цифры";
-      if (trimmed.length > 3) return "Максимум 3 цифры";
-      if (trimmed.length < 3) return "Введите 3 цифры";
-      if (trimmed.length === 3) {
-        const result = validateNetworkCode(trimmed);
-        if (!result.valid) return result.message;
-      }
-      return null;
-
-    case "Номер фидера 10(6)(3) кВ":
-      if (!/^\d*$/.test(trimmed)) return "Только цифры";
-      if (trimmed.length > 3) return "Максимум 3 цифры";
-      if (trimmed.length < 3) return "Введите 3 цифры";
-      return null;
-
-    case "Номер ТП 10(6)/0,4 кВ":
-      if (!/^[\dА-ЯA-Z]*$/.test(trimmed)) return "Только цифры и заглавные буквы";
-      if (trimmed.length > 2) return "Максимум 2 символа";
-      if (trimmed.length < 2) return "Введите 2 символа";
-      return null;
-
-    case "Номер фидера 0,4 кВ":
-      if (!/^[\dА-ЯA-Z]*$/.test(trimmed)) return "Только цифры и заглавные буквы";
-      if (trimmed.length > 2) return "Максимум 2 символа";
-      if (trimmed.length < 2) return "Введите 2 символа";
-      return null;
-
-    case "Код потребителя 3х-значный":
-      if (!/^\d*$/.test(trimmed)) return "Только цифры";
-      if (trimmed.length > 3) return "Максимум 3 цифры";
-      if (trimmed.length < 3) return "Введите 3 цифры";
-      return null;
-
-    default:
-      return null;
-  }
-};
-
-/**
- * Валидация полей SIM-карты (короткий/полный) для inline-режима
- * Возвращает объект ошибок по двум полям, основываясь на текущей строке.
- */
-const getSimFieldErrors = (row, acceptedSimShortRows = new Set()) => {
-  const errors = {};
-  const shortKey = "Номер сим карты (короткий)";
-  const fullKey = "Номер сим карты (полный)";
-  const shortVal = (row[shortKey] || "").trim();
-  const fullVal = (row[fullKey] || "").trim();
-
-  const hasShort = shortVal !== "";
-  const hasFull = fullVal !== "";
-
-  // Требование: хотя бы одно поле обязательно
-  if (!hasShort && !hasFull) {
-    errors[shortKey] = "Заполните короткий или полный номер";
-    errors[fullKey] = "Заполните короткий или полный номер";
-    return errors;
-  }
-
-  // Короткий: если заполнен — только цифры, максимум 5; подтверждение нужно, если нет полного номера
-  if (hasShort) {
-    const rowIndex = row.__rowIndex;
-    const isAccepted = rowIndex !== undefined && acceptedSimShortRows.has(rowIndex);
-    const needsAccept = !hasFull && !isAccepted;
-
-    if (!/^\d*$/.test(shortVal)) {
-      errors[shortKey] = "Только цифры";
-    } else if (shortVal.length > 5) {
-      errors[shortKey] = "Максимум 5 цифр";
-    } else if (needsAccept) {
-      errors[shortKey] = 'Нажмите "Принять номер"';
-    }
-  }
-
-  // Полный: если заполнен — только цифры, 11 цифр, начинается с 89
-  if (hasFull) {
-    if (!/^\d*$/.test(fullVal)) {
-      errors[fullKey] = "Только цифры";
-    } else if (fullVal.length > 11) {
-      errors[fullKey] = "Максимум 11 цифр";
-    } else if (fullVal.length >= 2 && !fullVal.startsWith("89")) {
-      errors[fullKey] = "Должен начинаться с 89";
-    } else if (fullVal.length < 11) {
-      errors[fullKey] = "Введите 11 цифр";
-    }
-  }
-
-  return errors;
-};
-
-/**
- * Компонент импорта Excel файлов.
- * Парсит Excel, валидирует данные, позволяет исправлять ошибки и экспортировать.
+ * Основной компонент импорта Excel файлов.
+ * Позволяет загружать Excel файлы, валидировать данные, редактировать ошибки
+ * и экспортировать исправленные данные или отправлять на email.
  */
 const ExcelFormImporter = () => {
-  // === Хук для работы с данными ===
+  // === Получаем данные и функции из хука управления Excel данными ===
   const {
-    headers,
+    headers, // Заголовки колонок Excel файла
     setHeaders,
-    rows,
+    rows, // Массив строк с данными
     setRows,
-    errors,
+    errors, // Объект с ошибками валидации {rowIndex: {field: error}}
     setErrors,
-    validationSuccess,
+    validationSuccess, // Флаг успешной валидации всех данных
     setValidationSuccess,
-    touchedFields,
+    touchedFields, // Отслеживание редактированных полей {rowIndex: Set(['field1', 'field2'])}
     setTouchedFields,
-    streetsBySettlement,
-    loadStreetsForSettlement,
-    autofillPasswords,
-    autofillIpAddresses,
-    calculateNetworkAddresses,
-    autofillProtocols,
-    assignPortsToRows,
-    validateAll,
-    getOptionsForField,
+    loadStreetsForSettlement, // Загрузка улиц для населенного пункта
+    autofillPasswords, // Автозаполнение паролей для счетчиков
+    autofillIpAddresses, // Автозаполнение IP адресов
+    calculateNetworkAddresses, // Расчет сетевых адресов
+    autofillProtocols, // Автозаполнение протоколов
+    assignPortsToRows, // Назначение портов строкам
+    validateAll, // Полная валидация всех данных
+    getOptionsForField, // Получение опций для полей-справочников
   } = useExcelData();
 
-  // Строки, где пользователь вручную подтвердил короткий номер SIM
-  const [acceptedSimShortRows, setAcceptedSimShortRows] = useState(new Set());
-  const acceptedSimShortRowsRef = useRef(acceptedSimShortRows);
+  // === Локальное состояние компонента ===
 
-  useEffect(() => {
-    acceptedSimShortRowsRef.current = acceptedSimShortRows;
-  }, [acceptedSimShortRows]);
-
-  // === State для UI ===
+  // Ошибка загрузки файла
   const [loadError, setLoadError] = useState(null);
+
+  // Флаг загрузки файла
   const [fileLoading, setFileLoading] = useState(false);
 
-  // === State для email ===
-  const [emailDialog, setEmailDialog] = useState(false);
-  const [email, setEmail] = useState("");
-  const [emailSending, setEmailSending] = useState(false);
+  // Флаг, требующий принятия изменений перед финальной валидацией
+  const [acceptRequired, setAcceptRequired] = useState(false);
 
-  // === Refs для доступа к актуальным данным в callbacks ===
+  // === Refs для доступа к актуальным данным в асинхронных колбеках ===
+  // Без refs колбеки работали бы со stale closure значениями
   const rowsRef = useRef(rows);
   const touchedFieldsRef = useRef(touchedFields);
 
+  // Синхронизируем refs с актуальными значениями state
   useEffect(() => {
     rowsRef.current = rows;
   }, [rows]);
@@ -203,86 +68,33 @@ const ExcelFormImporter = () => {
     touchedFieldsRef.current = touchedFields;
   }, [touchedFields]);
 
-  // Загружаем дефолтный email с сервера
-  useEffect(() => {
-    let active = true;
-    ApiService.getDefaultEmail()
-      .then((resp) => {
-        if (active && resp?.defaultEmail) {
-          setEmail(resp.defaultEmail);
-        }
-      })
-      .catch((err) => {
-        console.error("Не удалось получить дефолтный email:", err);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
   /**
    * Обработчик загрузки Excel файла.
+   * Парсит файл, применяет автозаполнения, сбрасывает все состояния.
    */
   const handleFile = useCallback(
     async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
+
       setLoadError(null);
       setFileLoading(true);
 
       try {
-        const XLSX = await import(/* webpackChunkName: "xlsx" */ "xlsx");
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
+        // Парсим Excel файл
+        const { headers: hdrs, rows: content } = await parseExcelFile(file);
 
-        const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        if (!sheetData || sheetData.length === 0) {
-          setLoadError("Пустой лист в файле");
-          return;
-        }
+        // Применяем автозаполнение протоколов
+        const processedContent = autofillProtocols(content);
 
-        const rawHdrRow = sheetData[1] && sheetData[1].length > 0 ? sheetData[1] : sheetData[0];
-
-        // Обработка дублирующихся заголовков - добавляем суффиксы _2, _3 и т.д.
-        const headerCounts = {};
-        const hdrs = rawHdrRow.map((h) => {
-          const trimmed = String(h || "").trim();
-          if (!trimmed) return trimmed;
-
-          if (headerCounts[trimmed] === undefined) {
-            headerCounts[trimmed] = 1;
-            return trimmed;
-          } else {
-            headerCounts[trimmed]++;
-            return `${trimmed}_${headerCounts[trimmed]}`;
-          }
-        });
-
-        const content = sheetData
-          .slice(2)
-          .map((rowArr) => {
-            const obj = {};
-            hdrs.forEach((h, i) => {
-              obj[h] = rowArr[i] !== undefined && rowArr[i] !== null ? String(rowArr[i]).trim() : "";
-            });
-            return obj;
-          })
-          .filter((row) => Object.values(row).some((val) => val !== ""));
-
-        let processedContent = content;
-        // Заполняем протокол по настройкам (модели не нормализуем — пусть валидация покажет ошибку)
-        processedContent = autofillProtocols(processedContent);
-
+        // Сбрасываем все состояния для нового файла
         setHeaders(hdrs);
         setRows(processedContent);
         setErrors({});
         setValidationSuccess(false);
-        setTouchedFields({}); // Сбрасываем затронутые поля при загрузке нового файла
-        setAcceptedSimShortRows(new Set()); // Сбрасываем подтверждения коротких номеров при новой загрузке
-
-        e.target.value = "";
+        setTouchedFields({});
+        setAcceptRequired(false);
+        e.target.value = ""; // Сбрасываем input для повторной загрузки того же файла
       } catch (err) {
         console.error("Error parsing Excel:", err);
         setLoadError(String(err.message || err));
@@ -290,157 +102,126 @@ const ExcelFormImporter = () => {
         setFileLoading(false);
       }
     },
-    [autofillProtocols, setHeaders, setRows, setErrors, setValidationSuccess]
+    [autofillProtocols, setHeaders, setRows, setErrors, setValidationSuccess, setTouchedFields]
   );
 
   /**
-   * Обработчик изменения значения в ячейке.
+   * Валидация всех данных с учетом флага принятия изменений.
+   * Используется для проверки данных перед экспортом/отправкой.
+   */
+  const validateAllWithOverrides = useCallback(async () => {
+    const raw = await validateAll(); // Выполняем полную валидацию
+    setErrors(raw);
+    const hasErrors = Object.keys(raw || {}).length > 0;
+    // Успех только если нет ошибок И пользователь принял изменения
+    setValidationSuccess(!hasErrors && !acceptRequired);
+    return raw;
+  }, [validateAll, setErrors, setValidationSuccess, acceptRequired]);
+
+  /**
+   * Обработчик изменения ячейки в таблице.
+   * Обновляет данные, добавляет поле в touchedFields, выполняет inline валидацию.
    */
   const handleCellChange = useCallback(
     async (ri, field, value) => {
-      // Используем ref для получения актуальных данных
+      // Получаем актуальные данные через refs (для асинхронной работы)
       const currentRows = rowsRef.current;
       const currentTouchedFields = touchedFieldsRef.current;
 
-      // Создаём обновлённую строку
+      // Создаем обновленную строку для валидации
       const updatedRow = { ...(currentRows[ri] || {}), [field]: value, __rowIndex: ri };
-
-      // Создаём обновлённые touchedFields
       const updatedTouchedFields = new Set(currentTouchedFields[ri] || []);
-      updatedTouchedFields.add(field);
+      updatedTouchedFields.add(field); // Добавляем текущее поле в этот Set
 
-      // Обновляем строку
+      // Обновляем состояние данных
       setRows((prev) => {
         const copy = [...prev];
         copy[ri] = { ...prev[ri], [field]: value };
         return copy;
       });
 
-      // Отмечаем поле как затронутое
+      // Добавляем поле в touchedFields
       setTouchedFields((prev) => {
         const rowTouched = new Set(prev[ri] || []);
         rowTouched.add(field);
         return { ...prev, [ri]: rowTouched };
       });
 
-      // Для полей сетевого кода - сразу проверяем все 5 полей
+      // После любого изменения требуем принятия изменений
+      setAcceptRequired(true);
+
+      // === Inline валидация в зависимости от типа поля ===
+
       if (NETWORK_CODE_FIELDS.includes(field)) {
-        setErrors((prevErrors) => {
-          const copy = { ...prevErrors };
-
-          // Проверяем все 5 полей сетевого кода с актуальными данными
-          NETWORK_CODE_FIELDS.forEach((networkField) => {
-            const fieldError = validateNetworkCodeField(
-              networkField,
-              updatedRow[networkField],
-              updatedRow,
-              updatedTouchedFields
-            );
-
-            if (fieldError) {
+        // Валидация полей сетевого кода (взаимосвязаны)
+        setErrors((prev) => {
+          const copy = { ...prev };
+          NETWORK_CODE_FIELDS.forEach((nf) => {
+            const err = validateNetworkCodeField(nf, updatedRow[nf], updatedRow, updatedTouchedFields);
+            if (err) {
               if (!copy[ri]) copy[ri] = {};
-              copy[ri][networkField] = fieldError;
-            } else {
-              if (copy[ri]) {
-                delete copy[ri][networkField];
-              }
-            }
+              copy[ri][nf] = err;
+            } else if (copy[ri]) delete copy[ri][nf];
           });
-
-          // Удаляем строку из ошибок если она пустая
-          if (copy[ri] && Object.keys(copy[ri]).length === 0) {
-            delete copy[ri];
-          }
-
+          if (copy[ri] && Object.keys(copy[ri]).length === 0) delete copy[ri];
           return copy;
         });
       } else if (SIM_CARD_FIELDS.includes(field)) {
-        // Для полей SIM-карты — инлайн-валидация обоих полей (логика "или")
-        // Передаем acceptedSimShortRows, чтобы учитывать ручное подтверждение короткого номера
-        const simErrors = getSimFieldErrors(updatedRow, acceptedSimShortRowsRef.current);
-
+        // Валидация полей SIM-карты (короткий/полный номер)
+        const simErrors = getSimFieldErrors(updatedRow);
         setErrors((prev) => {
           const copy = { ...prev };
-          // Обновляем ошибки для обоих полей SIM
           SIM_CARD_FIELDS.forEach((k) => {
-            const msg = simErrors[k];
-            if (msg) {
+            if (simErrors[k]) {
               if (!copy[ri]) copy[ri] = {};
-              copy[ri][k] = msg;
-            } else if (copy[ri]) {
-              delete copy[ri][k];
-            }
+              copy[ri][k] = simErrors[k];
+            } else if (copy[ri]) delete copy[ri][k];
           });
-
-          if (copy[ri] && Object.keys(copy[ri]).length === 0) {
-            delete copy[ri];
+          if (copy[ri] && Object.keys(copy[ri]).length === 0) delete copy[ri];
+          return copy;
+        });
+      } else if (field === "Номер трансформаторной подстанции") {
+        // Валидация поля трансформатора
+        const tErr = getTransformerFieldErrors(updatedRow);
+        setErrors((prev) => {
+          const copy = { ...prev };
+          if (tErr[field]) {
+            if (!copy[ri]) copy[ri] = {};
+            copy[ri][field] = tErr[field];
+          } else if (copy[ri]) {
+            delete copy[ri][field];
+            if (Object.keys(copy[ri]).length === 0) delete copy[ri];
           }
           return copy;
         });
       } else {
-        // Для остальных полей - просто удаляем ошибку
+        // Валидация остальных полей с простыми regex правилами
+        const fieldError = validateSimpleField(field, value);
         setErrors((prev) => {
           const copy = { ...prev };
-          if (copy[ri]) {
+          if (fieldError) {
+            if (!copy[ri]) copy[ri] = {};
+            copy[ri][field] = fieldError;
+          } else if (copy[ri]) {
             delete copy[ri][field];
             if (Object.keys(copy[ri]).length === 0) delete copy[ri];
           }
           return copy;
         });
       }
+
+      // Сбрасываем флаг успешной валидации при любом изменении
       setValidationSuccess(false);
 
-      // Если изменили населенный пункт - асинхронно загружаем улицы
-      if (field === "Населенный пункт" && value) {
-        await loadStreetsForSettlement(value);
-      }
+      // Если изменили населенный пункт - загружаем улицы для него
+      if (field === "Населенный пункт" && value) await loadStreetsForSettlement(value);
     },
     [loadStreetsForSettlement, setRows, setErrors, setValidationSuccess, setTouchedFields]
   );
 
-  // Применяем ручные подтверждения для короткого SIM к списку ошибок
-  const applySimShortOverrides = useCallback(
-    (rawErrors) => {
-      if (!rawErrors) return rawErrors;
-      const copy = { ...rawErrors };
-
-      rows.forEach((row, ri) => {
-        const shortVal = (row["Номер сим карты (короткий)"] || "").trim();
-        const fullVal = (row["Номер сим карты (полный)"] || "").trim();
-        const hasShort = shortVal !== "";
-        const hasFull = fullVal !== "";
-        const accepted = acceptedSimShortRows.has(ri);
-
-        // Если короткий есть, полного нет и нет подтверждения — ошибка
-        if (hasShort && !hasFull && !accepted) {
-          if (!copy[ri]) copy[ri] = {};
-          copy[ri]["Номер сим карты (короткий)"] = 'Нажмите "Принять номер"';
-        }
-
-        // Если короткий подтвержден или есть полный — убираем ошибку по короткому
-        const shortIsOk = hasFull || accepted;
-        if (shortIsOk && copy[ri]) {
-          delete copy[ri]["Номер сим карты (короткий)"];
-          if (Object.keys(copy[ri]).length === 0) delete copy[ri];
-        }
-      });
-
-      return copy;
-    },
-    [acceptedSimShortRows, rows]
-  );
-
-  // Обертка поверх validateAll: удаляет ошибки короткого SIM для подтвержденных строк
-  const validateAllWithOverrides = useCallback(async () => {
-    const raw = await validateAll();
-    const adjusted = applySimShortOverrides(raw);
-    setErrors(adjusted);
-    setValidationSuccess(Object.keys(adjusted || {}).length === 0);
-    return adjusted;
-  }, [validateAll, applySimShortOverrides, setErrors, setValidationSuccess]);
-
   /**
-   * Экспорт данных в Excel.
+   * Обработчик экспорта данных в Excel.
+   * Проверяет валидность перед экспортом.
    */
   const handleExport = useCallback(async () => {
     const validation = await validateAllWithOverrides();
@@ -448,9 +229,7 @@ const ExcelFormImporter = () => {
       alert("Есть ошибки в данных. Исправьте их перед экспортом.");
       return;
     }
-
     try {
-      // Экспортируем данные как есть (без автозаполнения IP/сетевых адресов)
       await ApiService.exportToExcel(rows);
     } catch (err) {
       console.error("Export error:", err);
@@ -459,77 +238,46 @@ const ExcelFormImporter = () => {
   }, [rows, validateAllWithOverrides]);
 
   /**
-   * Отправка на email.
+   * Подготовка данных для отправки на email.
+   * Выполняет все необходимые автозаполнения и расчеты.
+   * Данные полученные в первом processed передаются в следующий и объединяются в один объект
    */
-  const handleSendToEmail = useCallback(async () => {
-    if (!email || !email.includes("@")) {
-      alert("Введите корректный email адрес");
-      return;
-    }
-
-    const validation = await validateAllWithOverrides();
-    if (Object.keys(validation).length > 0) {
-      alert("Есть ошибки в данных. Исправьте их перед отправкой.");
-      return;
-    }
-
-    try {
-      setEmailSending(true);
-      // Рассчитываем сетевые адреса, заполняем пароли, IP и назначаем порты
-      let processedData = calculateNetworkAddresses(rows);
-      processedData = autofillPasswords(processedData);
-      processedData = autofillIpAddresses(processedData);
-      processedData = await assignPortsToRows(processedData);
-
-      await ApiService.sendExcelToEmail(processedData, email);
-      alert(`Файл успешно отправлен на ${email}`);
-      setEmailDialog(false);
-    } catch (error) {
-      console.error("Ошибка при отправке на email:", error);
-      alert("Ошибка при отправке на email");
-    } finally {
-      setEmailSending(false);
-    }
-  }, [
-    email,
-    rows,
-    validateAllWithOverrides,
-    calculateNetworkAddresses,
-    autofillPasswords,
-    autofillIpAddresses,
-    assignPortsToRows,
-  ]);
-
-  // Ручное подтверждение короткого номера SIM для конкретной строки
-  const handleAcceptSimShort = useCallback(
-    (rowIndex) => {
-      setAcceptedSimShortRows((prev) => new Set(prev).add(rowIndex));
-      // Удаляем ошибку по этому полю для строки
-      setErrors((prev) => {
-        const copy = { ...prev };
-        if (copy[rowIndex]) {
-          delete copy[rowIndex]["Номер сим карты (короткий)"];
-          if (Object.keys(copy[rowIndex]).length === 0) delete copy[rowIndex];
-        }
-        // Если больше нет ошибок, считаем проверку успешной
-        if (Object.keys(copy).length === 0) {
-          setValidationSuccess(true);
-        }
-        return copy;
-      });
+  const processDataForEmail = useCallback(
+    async (data) => {
+      let processed = calculateNetworkAddresses(data); // Расчет сетевых адресов
+      processed = autofillPasswords(processed); // Пароли для счетчиков
+      processed = autofillIpAddresses(processed); // IP адреса
+      processed = await assignPortsToRows(processed); // Назначение портов
+      return processed;
     },
-    [setAcceptedSimShortRows, setErrors, setValidationSuccess]
+    [calculateNetworkAddresses, autofillPasswords, autofillIpAddresses, assignPortsToRows]
   );
 
-  const errorsCount = Object.keys(errors).length;
+  // === Хук для управления отправкой на email ===
+  const {
+    emailDialog, // Открыто ли диалоговое окно email
+    email, // Email адрес
+    emailSending, // Флаг отправки
+    emailMessage, // Сообщение результата
+    openDialog, // Открыть диалог
+    closeDialog, // Закрыть диалог
+    handleEmailChange, // Изменение email
+    handleSendToEmail, // Отправка на email
+  } = useEmailSender(rows, validateAllWithOverrides, processDataForEmail);
+
+  // === Вычисляемые значения для рендера ===
+
+  const errorsCount = Object.keys(errors).length; // Количество строк с ошибками
+  const hasRows = rows.length > 0; // Есть ли загруженные данные
 
   return (
     <Box sx={{ p: 3 }}>
+      {/* Заголовок компонента */}
       <Typography variant="h5" sx={{ mb: 3, textAlign: "left" }}>
         Импорт Excel
       </Typography>
 
-      {/* Кнопка загрузки файла */}
+      {/* Секция загрузки файла */}
       <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2 }}>
         <Button variant="outlined" component="label" disabled={fileLoading}>
           Выбрать файл
@@ -543,22 +291,22 @@ const ExcelFormImporter = () => {
             </Typography>
           </Box>
         )}
-        {!fileLoading && rows.length > 0 && (
+        {!fileLoading && hasRows && (
           <Typography variant="body2" color="success.main">
             ✓ Файл загружен
           </Typography>
         )}
       </Box>
 
-      {/* Ошибка загрузки */}
+      {/* Сообщение об ошибке загрузки */}
       {loadError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           Ошибка при загрузке файла: {loadError}
         </Alert>
       )}
 
-      {/* Кнопка проверки */}
-      {rows.length > 0 && !validationSuccess && errorsCount === 0 && (
+      {/* Кнопка проверки данных (показывается когда нет ошибок и не валидировано) */}
+      {hasRows && !validationSuccess && errorsCount === 0 && (
         <Box sx={{ mb: 2, textAlign: "left" }}>
           <Button variant="outlined" onClick={validateAllWithOverrides} size="large">
             Проверить данные
@@ -566,43 +314,46 @@ const ExcelFormImporter = () => {
         </Box>
       )}
 
-      {/* Успешная валидация */}
+      {/* Успешная валидация - показываем кнопки экспорта */}
       {validationSuccess && (
         <Box>
           <Alert severity="success" sx={{ mb: 2 }}>
-            ✓ Проверка пройдена успешно! Все данные корректны. Теперь вы можете экспортировать файл.
+            ✓ Проверка пройдена успешно! Все данные корректны.
           </Alert>
           <Box sx={{ display: "flex", gap: 2 }}>
             <Button variant="contained" onClick={handleExport}>
               Экспортировать исправленный Excel
             </Button>
-            <Button variant="contained" onClick={() => setEmailDialog(true)} color="primary">
+            <Button variant="contained" onClick={openDialog} color="primary">
               Отправить на Email
             </Button>
           </Box>
         </Box>
       )}
 
-      {/* Список ошибок */}
-      {errorsCount > 0 && (
+      {/* Карточки с ошибками и редактированием */}
+      {(errorsCount > 0 || acceptRequired) && (
         <>
-          <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
-            <Alert severity="error" sx={{ flex: 1 }}>
-              Найдено ошибок: {errorsCount} строк(и) из {rows.length}
+          {/* Алерт с информацией о статусе */}
+          <Box sx={{ mb: 2 }}>
+            <Alert severity={errorsCount > 0 ? "error" : "info"}>
+              {errorsCount > 0
+                ? `Найдено ошибок: ${errorsCount} строк(и) из ${rows.length}`
+                : "Все ошибки исправлены. Нажмите 'Принять изменения' для продолжения."}
             </Alert>
-            <Button variant="outlined" onClick={validateAllWithOverrides}>
-              Проверить повторно
-            </Button>
           </Box>
 
+          {/* Список карточек с ошибками */}
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {rows
+              // Добавляем индекс строки к данным
               .map((row, ri) => ({ row: { ...row, __rowIndex: ri }, ri }))
-              .filter(({ ri }) => {
-                if (errors[ri]) return true;
-                const touched = touchedFields[ri];
-                return touched instanceof Set ? touched.size > 0 : Boolean(touched);
-              })
+              // Фильтруем: показываем строки с ошибками ИЛИ с редактированными полями
+              .filter(
+                ({ ri }) =>
+                  errors[ri] || (touchedFields[ri] instanceof Set ? touchedFields[ri].size > 0 : touchedFields[ri])
+              )
+              // Рендерим карточку для каждой строки
               .map(({ row, ri }) => (
                 <ErrorCard
                   key={ri}
@@ -613,22 +364,35 @@ const ExcelFormImporter = () => {
                   touchedFields={touchedFields[ri] || new Set()}
                   getOptionsForField={getOptionsForField}
                   onCellChange={handleCellChange}
-                  onAcceptSimShort={handleAcceptSimShort}
-                  isSimShortAccepted={acceptedSimShortRows.has(ri)}
+                  // Обработчик принятия изменений для всей строки
+                  onAcceptAll={async () => {
+                    // Сначала сбрасываем флаг принятия
+                    setAcceptRequired(false);
+                    // Затем проверяем валидацию всех данных
+                    const allErrors = await validateAll();
+                    setErrors(allErrors);
+                    // Если ошибок нет - устанавливаем финальный успех
+                    if (Object.keys(allErrors || {}).length === 0) {
+                      setValidationSuccess(true);
+                    }
+                  }}
+                  showAcceptButton={acceptRequired} // Показывать кнопку только если нужны изменения
+                  hasErrors={Object.keys(errors[ri] || {}).length > 0} // Есть ли ошибки в этой строке
                 />
               ))}
           </Box>
         </>
       )}
 
-      {/* Диалог email */}
-      <EmailDialog
+      {/* Диалоговое окно отправки на email */}
+      <EmailSenderDialog
         open={emailDialog}
-        onClose={() => setEmailDialog(false)}
+        onClose={closeDialog}
         email={email}
-        onEmailChange={setEmail}
+        onEmailChange={handleEmailChange}
         onSend={handleSendToEmail}
         sending={emailSending}
+        message={emailMessage}
       />
     </Box>
   );

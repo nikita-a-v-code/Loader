@@ -63,8 +63,9 @@ const ErrorCard = ({
   touchedFields = new Set(),
   getOptionsForField,
   onCellChange,
-  onAcceptSimShort,
-  isSimShortAccepted = false,
+  onAcceptAll,
+  showAcceptButton = false,
+  hasErrors = false,
 }) => {
   const rowErrors = errors[rowIndex] || {};
   const errorFields = Object.keys(rowErrors);
@@ -132,8 +133,6 @@ const ErrorCard = ({
             // Поле показано для контекста только если нет ошибки И не было затронуто пользователем
             const isContextField = !hasError && !isTouched;
 
-            const isShortSimField = h === "Номер сим карты (короткий)";
-
             return (
               <Grid item xs={12} sm={6} md={4} key={`${h}-${idx}`}>
                 {/* Метка для выравнивания высоты */}
@@ -157,21 +156,17 @@ const ErrorCard = ({
                     value={row[h] ?? ""}
                     inputValue={row[h] ?? ""}
                     filterOptions={(opts, state) => {
-                      // Для типа абонента, статуса счета и модели счетчика - стандартная фильтрация
                       if (h === "Тип абонента" || h === "Статус счета" || h === "Модель счетчика") {
                         const searchValue = (state.inputValue || "").toLowerCase();
                         return opts.filter((opt) => opt.toLowerCase().includes(searchValue));
                       }
-                      // Для остальных полей используем fuzzy search
                       const searchValue = state.inputValue || "";
                       return getSimilarOptions(searchValue, opts);
                     }}
                     onChange={(event, newValue) => {
-                      // onChange вызывается при выборе из списка
                       onCellChange(rowIndex, h, newValue ?? "");
                     }}
                     onInputChange={(event, newInputValue, reason) => {
-                      // Обновляем только при вводе пользователя
                       if (reason === "input") {
                         onCellChange(rowIndex, h, newInputValue);
                       }
@@ -201,38 +196,39 @@ const ErrorCard = ({
                     )}
                   />
                 ) : (
-                  <>
-                    <TextField
-                      key={`textfield-${rowIndex}-${h}`}
-                      label={h}
-                      value={row[h] ?? ""}
-                      onChange={(e) => onCellChange(rowIndex, h, e.target.value)}
-                      error={hasError}
-                      helperText={isShortSimField && isSimShortAccepted ? "Принято вручную" : rowErrors[h] || ""}
-                      variant="outlined"
-                      fullWidth
-                      size="small"
-                      multiline
-                      maxRows={3}
-                    />
-                    {isShortSimField && (
-                      <Box sx={{ mt: 1, display: "flex", gap: 1 }}>
-                        <Button
-                          variant={isSimShortAccepted ? "outlined" : "contained"}
-                          color={isSimShortAccepted ? "success" : "primary"}
-                          size="small"
-                          onClick={() => onAcceptSimShort?.(rowIndex)}
-                          disabled={isSimShortAccepted}
-                        >
-                          {isSimShortAccepted ? "Принято" : "Принять номер"}
-                        </Button>
-                      </Box>
-                    )}
-                  </>
+                  <TextField
+                    key={`textfield-${rowIndex}-${h}`}
+                    label={h}
+                    value={row[h] ?? ""}
+                    onChange={(e) => onCellChange(rowIndex, h, e.target.value)}
+                    error={hasError}
+                    helperText={rowErrors[h] || ""}
+                    variant="outlined"
+                    fullWidth
+                    size="small"
+                    multiline
+                    maxRows={3}
+                  />
                 )}
               </Grid>
             );
           })}
+          {showAcceptButton && (
+            <Grid item xs={12} sm={6} md={4}>
+              <Box sx={{ mb: 0.5, height: 18 }} />
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                fullWidth
+                sx={{ height: 40 }}
+                onClick={onAcceptAll}
+                disabled={hasErrors}
+              >
+                Принять изменения
+              </Button>
+            </Grid>
+          )}
         </Grid>
       </CardContent>
     </Card>

@@ -8,7 +8,9 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import Alert from "@mui/material/Alert";
 import ErrorAlert from "../../ui/ErrorAlert";
+import EmailSenderDialog from "../../ui/EmailSenderDialog";
 import ApiService from "../../services/api";
 import { useValidationErrors, validators } from "../../utils/Validation/Validation";
 import { calculateNetworkAddress } from "../../utils/networkAdress";
@@ -43,6 +45,7 @@ const SingleForm = () => {
     accountStatus: "",
     // Сетевой код
     networkCode: "",
+    transformerSubstationNumber: "",
     numberSupport04: "",
     maxPower: "",
     // Прибор учета
@@ -127,6 +130,7 @@ const SingleForm = () => {
   const [email, setEmail] = useState("");
   const [emailDialog, setEmailDialog] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
+  const [emailMessage, setEmailMessage] = useState({ text: "", type: "success" });
 
   const {
     errors: validationErrors,
@@ -237,7 +241,7 @@ const SingleForm = () => {
 
   const handleSendToEmail = async () => {
     if (!email || !email.includes("@")) {
-      alert("Введите корректный email адрес");
+      setEmailMessage({ text: "Введите корректный email адрес", type: "error" });
       return;
     }
 
@@ -250,13 +254,12 @@ const SingleForm = () => {
         exportObj = getExportFormData(true);
       }
       setEmailSending(true);
+      setEmailMessage({ text: "", type: "success" }); // Очистить предыдущее сообщение
       await ApiService.sendExcelToEmail([exportObj], email);
-      alert(`Файл успешно отправлен на ${email}`);
-      setEmailDialog(false);
-      setEmail("");
+      setEmailMessage({ text: `Файл успешно отправлен на ${email}`, type: "success" });
     } catch (error) {
       console.error("Ошибка при отправке на email:", error);
-      alert("Ошибка при отправке на email");
+      setEmailMessage({ text: "Ошибка при отправке на email", type: "error" });
     } finally {
       setEmailSending(false);
     }
@@ -334,7 +337,7 @@ const SingleForm = () => {
     }
 
     // Валидация полей
-    if (fieldName === "house" || fieldName === "apartment") {
+    if (fieldName === "house" || fieldName === "apartment" || fieldName === "transformerSubstationNumber") {
       if (!validateField(value, validators.digits, errorKey)) return;
     }
 
@@ -516,6 +519,7 @@ const SingleForm = () => {
       formData.typeDevice,
       formData.serialNumber,
       formData.password,
+      formData.transformerSubstationNumber,
       formData.ttCoeff,
       formData.tnCoeff,
       formData.ipAddress,
@@ -614,36 +618,28 @@ const SingleForm = () => {
         </Button>
         <Button
           variant="contained"
-          onClick={() => setEmailDialog(true)}
+          onClick={() => {
+            setEmailDialog(true);
+            setEmailMessage({ text: "", type: "success" });
+          }}
           color={allRequiredFilled ? "success" : "primary"}
           disabled={!allRequiredFilled}
         >
           Отправить на Email
         </Button>
         {/* Диалог для ввода email */}
-        <Dialog open={emailDialog} onClose={() => setEmailDialog(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Отправить Excel файл на электронную почту</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Email адрес"
-              type="email"
-              fullWidth
-              variant="outlined"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@mail.com"
-              sx={{ mt: 2 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEmailDialog(false)}>Отмена</Button>
-            <Button onClick={handleSendToEmail} variant="contained" disabled={emailSending}>
-              {emailSending ? "Отправляем..." : "Отправить"}
-            </Button>
-          </DialogActions>
-        </Dialog>
+        <EmailSenderDialog
+          open={emailDialog}
+          onClose={() => setEmailDialog(false)}
+          email={email}
+          onEmailChange={(value) => {
+            setEmail(value);
+            setEmailMessage({ text: "", type: "success" });
+          }}
+          onSend={handleSendToEmail}
+          sending={emailSending}
+          message={emailMessage}
+        />
       </Box>
     </Box>
   );

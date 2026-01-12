@@ -20,6 +20,24 @@ const NetworkSection = ({ formData, handleFieldChange, validationErrors = {}, er
           helperText={validationErrors.networkCode ? errorMessages.networkCode : ""}
         />
         <EnSelect
+          label="Номер трансформаторной подстанции"
+          value={formData.transformerSubstationNumber}
+          onChange={(e) => handleFieldChange("transformerSubstationNumber", e.target.value)}
+          freeInput
+          required
+          error={validationErrors.transformerSubstationNumber}
+          helperText={validationErrors.transformerSubstationNumber ? "Только цифры" : "Обязательное поле"}
+          sx={{
+            mt: 1,
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: formData.transformerSubstationNumber ? "success.main" : "error.main",
+                borderWidth: "3px",
+              },
+            },
+          }}
+        />
+        <EnSelect
           label="Номер опоры 0,4 кВ"
           value={formData.numberSupport04}
           onChange={(e) => handleFieldChange("numberSupport04", e.target.value)}

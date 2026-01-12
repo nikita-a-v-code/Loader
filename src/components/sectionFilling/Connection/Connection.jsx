@@ -14,6 +14,7 @@ import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
 import { validators, useValidationErrors } from "../../../utils/Validation/Validation";
 import ErrorAlert from "../../../ui/ErrorAlert";
+import EmailSenderDialog from "../../../ui/EmailSenderDialog";
 import ApiService from "../../../services/api";
 import { useExportData } from "../../../hooks/useExportData";
 import { calculateNetworkAddress } from "../../../utils/networkAdress";
@@ -36,6 +37,11 @@ const Connection = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [portsAssigned, setPortsAssigned] = useState(false);
+  const { errors: validationErrors, showError, clearError, validateField } = useValidationErrors();
+  const [emailDialog, setEmailDialog] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailMessage, setEmailMessage] = useState({ text: "", type: "success" });
 
   useEffect(() => {
     loadData();
@@ -171,11 +177,6 @@ const Connection = ({
     );
   };
 
-  const { errors: validationErrors, showError, clearError, validateField } = useValidationErrors();
-  const [emailDialog, setEmailDialog] = useState(false);
-  const [email, setEmail] = useState("");
-  const [emailSending, setEmailSending] = useState(false);
-
   useEffect(() => {
     let active = true;
     ApiService.getDefaultEmail()
@@ -287,7 +288,7 @@ const Connection = ({
 
   const handleSendToEmail = async () => {
     if (!email || !email.includes("@")) {
-      alert("Введите корректный email адрес");
+      setEmailMessage({ text: "Введите корректный email адрес", type: "error" });
       return;
     }
 
@@ -296,13 +297,12 @@ const Connection = ({
       if (!portsAssigned) {
         assignPortsToConnections();
       }
+      setEmailMessage({ text: "", type: "success" }); // Очистить предыдущее сообщение
       await ApiService.sendExcelToEmail(exportDataWithPort, email);
-      alert(`Файл успешно отправлен на ${email}`);
-      setEmailDialog(false);
-      setEmail("");
+      setEmailMessage({ text: `Файл успешно отправлен на ${email}`, type: "success" });
     } catch (error) {
       console.error("Ошибка при отправке на email:", error);
-      alert("Ошибка при отправке на email");
+      setEmailMessage({ text: "Ошибка при отправке на email", type: "error" });
     } finally {
       setEmailSending(false);
     }
@@ -725,29 +725,18 @@ const Connection = ({
       </Box>
 
       {/* Диалог для ввода email */}
-      <Dialog open={emailDialog} onClose={() => setEmailDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Отправить Excel файл на электронную почту</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Email адрес"
-            type="email"
-            fullWidth
-            variant="outlined"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="example@mail.com"
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEmailDialog(false)}>Отмена</Button>
-          <Button onClick={handleSendToEmail} variant="contained" disabled={emailSending}>
-            {emailSending ? "Отправляем..." : "Отправить"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <EmailSenderDialog
+        open={emailDialog}
+        onClose={() => setEmailDialog(false)}
+        email={email}
+        onEmailChange={(value) => {
+          setEmail(value);
+          setEmailMessage({ text: "", type: "success" });
+        }}
+        onSend={handleSendToEmail}
+        sending={emailSending}
+        message={emailMessage}
+      />
     </Box>
   );
 };

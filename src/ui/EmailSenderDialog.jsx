@@ -1,10 +1,19 @@
-import React from "react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from "@mui/material";
+import React, { useEffect } from "react";
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Alert } from "@mui/material";
 
 /**
- * Диалог для отправки Excel файла на email.
+ * Диалог для отправки файла на email.
  */
-const EmailDialog = ({ open, onClose, email, onEmailChange, onSend, sending }) => {
+const EmailSenderDialog = ({ open, onClose, email, onEmailChange, onSend, sending, message }) => {
+  useEffect(() => {
+    if (message && message.type === "success") {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [message, onClose]);
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Отправить Excel файл на электронную почту</DialogTitle>
@@ -21,6 +30,11 @@ const EmailDialog = ({ open, onClose, email, onEmailChange, onSend, sending }) =
           placeholder="example@mail.com"
           sx={{ mt: 2 }}
         />
+        {message && message.text && (
+          <Alert severity={message.type} sx={{ mt: 1 }}>
+            {message.text}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Отмена</Button>
@@ -32,4 +46,4 @@ const EmailDialog = ({ open, onClose, email, onEmailChange, onSend, sending }) =
   );
 };
 
-export default EmailDialog;
+export default EmailSenderDialog;

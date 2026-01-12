@@ -41,6 +41,7 @@ export const useExportData = ({
 
           // Код сети
           networkCode: networkData[i]?.networkCode || "",
+          transformerSubstationNumber: networkData[i]?.transformerSubstationNumber || "",
           numberSupport04: networkData[i]?.numberSupport04 || "",
           maxPower: networkData[i]?.maxPower || "",
 

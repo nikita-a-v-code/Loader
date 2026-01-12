@@ -116,40 +116,6 @@ const useExcelData = () => {
   };
 
   /**
-   * Нормализует модели счетчиков к названиям из API (без заполнения паролей).
-   * "милур 307" → "Милур 307", "МИР С04" → "МИР С-04"
-   */
-  const normalizeDeviceModels = useCallback(
-    (dataRows = null) => {
-      const rowsToProcess = dataRows || rows;
-
-      const updated = rowsToProcess.map((row) => {
-        const modelValue = row["Модель счетчика"];
-
-        if (modelValue) {
-          const normalizedInput = normalizeModel(modelValue);
-          const device = deviceListFull.find((d) => normalizeModel(d.name) === normalizedInput);
-
-          if (device) {
-            return {
-              ...row,
-              "Модель счетчика": device.name,
-            };
-          }
-        }
-        return row;
-      });
-
-      if (!dataRows) {
-        setRows(updated);
-      }
-
-      return updated;
-    },
-    [rows, deviceListFull]
-  );
-
-  /**
    * Заполняет пароли для моделей счетчиков (только для отправки на email).
    */
   const autofillPasswords = useCallback(
@@ -419,7 +385,6 @@ const useExcelData = () => {
 
     // Методы
     loadStreetsForSettlement,
-    normalizeDeviceModels,
     autofillPasswords,
     calculateNetworkAddresses,
     autofillIpAddresses,

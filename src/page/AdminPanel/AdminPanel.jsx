@@ -23,8 +23,6 @@ const AdminPanel = () => {
     { label: "Статусы счетов", component: <StatusesManager /> },
     { label: "МПЭС/РКЭС/МУ", component: <StructureManager /> },
     { label: "Модели счетчиков", component: <DevicesManager /> },
-    { label: "IP адреса", component: <ConnectionsManager /> },
-    { label: "Протоколы", component: <ProtocolsManager /> },
     { label: "Населенные пункты/Улицы", component: <AddressManager /> },
     { label: "Настройки", component: <Settings /> },
   ];

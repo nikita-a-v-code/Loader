@@ -23,6 +23,7 @@ const NetworkCode = ({
     for (let i = 0; i < pointsCount; i++) {
       code.push({
         networkCode: networkData[i]?.networkCode || "",
+        transformerSubstationNumber: networkData[i]?.transformerSubstationNumber || "",
         numberSupport04: networkData[i]?.numberSupport04 || "",
         maxPower: networkData[i]?.maxPower || "",
       });
@@ -34,6 +35,9 @@ const NetworkCode = ({
   const updateNetworkData = () => {
     onNetworkChange(networkPoints);
   };
+
+  // Проверка заполненности всех обязательных полей (номер ТП)
+  const allFilled = networkPoints.every((point) => point.transformerSubstationNumber);
 
   // Обработчик изменения значения поля для конкретной точки потребителя
   const handleFieldChange = (pointIndex, fieldName, value) => {
@@ -61,7 +65,7 @@ const NetworkCode = ({
       return;
     }
 
-    if (fieldName === "maxPower") {
+    if (fieldName === "maxPower" || fieldName === "transformerSubstationNumber") {
       if (!validateDigitsOnly(value)) {
         showError(errorKey);
         return;
@@ -177,6 +181,42 @@ const NetworkCode = ({
                   )}
                 </Box>
 
+                {/* Поле для ввода номера трансформаторной подстанции */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 1,
+                    width: "100%",
+                  }}
+                >
+                  <EnSelect
+                    id={`transformerSubstationNumber-${index}`}
+                    label="Номер трансформаторной подстанции"
+                    value={code.transformerSubstationNumber}
+                    onChange={(e) => handleFieldChange(index, "transformerSubstationNumber", e.target.value)}
+                    freeInput={true}
+                    required={true}
+                    size="small"
+                    error={validationErrors[`transformerSubstationNumber-${index}`]}
+                    helperText={
+                      validationErrors[`transformerSubstationNumber-${index}`] ? "Только цифры" : "Обязательное поле"
+                    }
+                    sx={{ minWidth: 210, marginTop: 2 }}
+                  />
+                  <Box sx={{ marginTop: 10 }}>
+                    <CopyButtons
+                      pointsCount={pointsCount}
+                      index={index}
+                      fieldValue={code.transformerSubstationNumber}
+                      onApplyToAll={() => applyToAll(index, "transformerSubstationNumber")}
+                      onApplyToNext={() => applyToNext(index, "transformerSubstationNumber")}
+                      totalPoints={networkPoints.length}
+                      arrowDirection="right"
+                    />
+                  </Box>
+                </Box>
+
                 {/* Поле для ввода номера опоры 0,4 */}
                 <Box
                   sx={{
@@ -194,9 +234,9 @@ const NetworkCode = ({
                     freeInput={true}
                     required={false}
                     size="small"
-                    sx={{ minWidth: 210, marginTop: 10 }}
+                    sx={{ minWidth: 210, marginTop: 2 }}
                   />
-                  <Box sx={{ marginTop: 10 }}>
+                  <Box>
                     <CopyButtons
                       pointsCount={pointsCount}
                       index={index}
@@ -267,7 +307,8 @@ const NetworkCode = ({
             updateNetworkData(); // Сохраняем данные перед переходом
             typeof onNext === "function" && onNext();
           }}
-          color={"success"}
+          disabled={!allFilled}
+          color={allFilled ? "success" : "primary"}
         >
           Далее
         </Button>
