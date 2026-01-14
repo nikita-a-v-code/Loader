@@ -1,24 +1,26 @@
 import * as React from "react";
-import { styled, alpha } from "@mui/material/styles";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
-import InputBase from "@mui/material/InputBase";
-import Badge from "@mui/material/Badge";
 import MenuItem from "@mui/material/MenuItem";
 import Menu from "@mui/material/Menu";
 import MenuIcon from "@mui/icons-material/Menu";
-
-import SearchIcon from "@mui/icons-material/Search";
-import AccountCircle from "@mui/icons-material/AccountCircle";
-import MailIcon from "@mui/icons-material/Mail";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import MoreIcon from "@mui/icons-material/MoreVert";
+import LogoutIcon from "@mui/icons-material/Logout";
+import PersonIcon from "@mui/icons-material/Person";
+import { Chip } from "@mui/material";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function Navbar() {
+  const { user, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
+
+  const isMenuOpen = Boolean(anchorEl);
+  const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
 
   // helper to set drawer state and notify other components via a custom event
   const notifyDrawer = (open) => {
@@ -29,11 +31,6 @@ export default function Navbar() {
       // ignore environments without CustomEvent
     }
   };
-  const [anchorEl, setAnchorEl] = React.useState(null);
-  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
-
-  const isMenuOpen = Boolean(anchorEl);
-  const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -52,11 +49,35 @@ export default function Navbar() {
     setMobileMoreAnchorEl(event.currentTarget);
   };
 
-  const toggleDrawer = (open) => (event) => {
-    if (event && event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
-      return;
+  const handleLogout = () => {
+    logout();
+    handleMenuClose();
+  };
+
+  const getRoleLabel = (roleName) => {
+    switch (roleName) {
+      case "admin":
+        return "Администратор";
+      case "operator":
+        return "Оператор";
+      case "viewer":
+        return "Просмотр";
+      default:
+        return roleName;
     }
-    notifyDrawer(open);
+  };
+
+  const getRoleColor = (roleName) => {
+    switch (roleName) {
+      case "admin":
+        return "error";
+      case "operator":
+        return "primary";
+      case "viewer":
+        return "default";
+      default:
+        return "default";
+    }
   };
 
   const menuId = "primary-search-account-menu";
@@ -64,7 +85,7 @@ export default function Navbar() {
     <Menu
       anchorEl={anchorEl}
       anchorOrigin={{
-        vertical: "top",
+        vertical: "bottom",
         horizontal: "right",
       }}
       id={menuId}
@@ -76,8 +97,24 @@ export default function Navbar() {
       open={isMenuOpen}
       onClose={handleMenuClose}
     >
-      <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-      <MenuItem onClick={handleMenuClose}>My account</MenuItem>
+      <Box sx={{ px: 2, py: 1, borderBottom: "1px solid #eee", minWidth: 200 }}>
+        <Typography variant="subtitle2" color="text.secondary">
+          Вы вошли как:
+        </Typography>
+        <Typography variant="body1" fontWeight="bold">
+          {user?.full_name}
+        </Typography>
+        <Chip
+          label={getRoleLabel(user?.role_name)}
+          color={getRoleColor(user?.role_name)}
+          size="small"
+          sx={{ mt: 0.5 }}
+        />
+      </Box>
+      <MenuItem onClick={handleLogout}>
+        <LogoutIcon sx={{ mr: 1 }} />
+        Выйти
+      </MenuItem>
     </Menu>
   );
 
@@ -98,33 +135,13 @@ export default function Navbar() {
       open={isMobileMenuOpen}
       onClose={handleMobileMenuClose}
     >
-      <MenuItem>
-        <IconButton size="large" aria-label="show 4 new mails" color="inherit">
-          <Badge badgeContent={4} color="error">
-            <MailIcon />
-          </Badge>
-        </IconButton>
-        <p>Messages</p>
+      <MenuItem disabled>
+        <PersonIcon sx={{ mr: 1 }} />
+        {user?.full_name}
       </MenuItem>
-      <MenuItem>
-        <IconButton size="large" aria-label="show 17 new notifications" color="inherit">
-          <Badge badgeContent={17} color="error">
-            <NotificationsIcon />
-          </Badge>
-        </IconButton>
-        <p>Notifications</p>
-      </MenuItem>
-      <MenuItem onClick={handleProfileMenuOpen}>
-        <IconButton
-          size="large"
-          aria-label="account of current user"
-          aria-controls="primary-search-account-menu"
-          aria-haspopup="true"
-          color="inherit"
-        >
-          <AccountCircle />
-        </IconButton>
-        <p>Profile</p>
+      <MenuItem onClick={handleLogout}>
+        <LogoutIcon sx={{ mr: 1 }} />
+        Выйти
       </MenuItem>
     </Menu>
   );
@@ -157,17 +174,19 @@ export default function Navbar() {
           </Typography>
 
           <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ display: { xs: "none", md: "flex" } }}>
-            <IconButton size="large" aria-label="show 4 new mails" color="inherit">
-              <Badge badgeContent={4} color="error">
-                <MailIcon />
-              </Badge>
-            </IconButton>
-            <IconButton size="large" aria-label="show 17 new notifications" color="inherit">
-              <Badge badgeContent={17} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
+
+          {/* Отображение информации о пользователе */}
+          <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1 }}>
+            <Chip
+              label={user?.full_name}
+              color="default"
+              size="small"
+              sx={{
+                backgroundColor: "rgba(255,255,255,0.2)",
+                color: "white",
+                "& .MuiChip-label": { fontWeight: 500 },
+              }}
+            />
             <IconButton
               size="large"
               edge="end"
@@ -177,7 +196,7 @@ export default function Navbar() {
               onClick={handleProfileMenuOpen}
               color="inherit"
             >
-              <AccountCircle />
+              <PersonIcon />
             </IconButton>
           </Box>
           <Box sx={{ display: { xs: "flex", md: "none" } }}>

@@ -10,6 +10,7 @@ import Settings from "../../components/adminPannel/Settings";
 import Navbar from "../../components/common/Navbar/Navbar";
 import Sidebar from "../../components/common/Sidebar/Sidebar";
 import AddressManager from "../../components/adminPannel/AddressManager";
+import UsersManager from "../../components/adminPannel/UsersManager";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -24,6 +25,7 @@ const AdminPanel = () => {
     { label: "МПЭС/РКЭС/МУ", component: <StructureManager /> },
     { label: "Модели счетчиков", component: <DevicesManager /> },
     { label: "Населенные пункты/Улицы", component: <AddressManager /> },
+    { label: "Пользователи", component: <UsersManager /> },
     { label: "Настройки", component: <Settings /> },
   ];
 

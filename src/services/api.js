@@ -4,15 +4,23 @@ const getApiBaseUrl = () => {
   return savedUrl || process.env.REACT_APP_API_URL || "http://localhost:3001";
 };
 
+// Получить токен из localStorage
+const getAuthToken = () => {
+  return localStorage.getItem("auth_token");
+};
+
 /* Единый класс, через который в компонентах будет вызываться любая функция api сервиса */
 class ApiService {
   /* Основной переиспользуемый другими запросами ниже запрос */
   static async request(endpoint, options = {}) {
     const url = `${getApiBaseUrl()}/api/${endpoint}`;
+    const token = getAuthToken();
 
     const config = {
       headers: {
         "Content-Type": "application/json",
+        // Добавляем токен авторизации к каждому запросу
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
       ...options,
@@ -20,6 +28,13 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
+
+      // Если токен невалидный - выбрасываем специальную ошибку
+      if (response.status === 401) {
+        const error = new Error("Unauthorized");
+        error.status = 401;
+        throw error;
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -334,6 +349,42 @@ class ApiService {
 
   static async getPorts() {
     return this.get("ports");
+  }
+
+  /* Методы для пользователей */
+  static async getUsers() {
+    return this.get("users");
+  }
+
+  static async getUser(id) {
+    return this.get(`users/${id}`);
+  }
+
+  static async createUser(data) {
+    return this.post("users", data);
+  }
+
+  static async updateUser(id, data) {
+    return this.put(`users/${id}`, data);
+  }
+
+  static async deleteUser(id) {
+    return this.delete(`users/${id}`);
+  }
+
+  /* Методы для ролей пользователей */
+  static async getUserRoles() {
+    return this.get("users/roles");
+  }
+
+  /* Методы авторизации */
+  static async login(login, password) {
+    return this.post("users/login", { login, password });
+  }
+
+  // Получить текущего пользователя по токену
+  static async getCurrentUser() {
+    return this.get("users/me");
   }
 }
 
