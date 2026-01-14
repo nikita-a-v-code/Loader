@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { validateNetworkCode } from "../networkCodeValidation";
+import { VALIDATION_RULES, NETWORK_CODE_FIELDS, NETWORK_CODE_FIELD_RULES } from "./validationRules";
 
 /**
  * Создаёт динамическую схему валидации для Excel импорта.
@@ -43,7 +44,24 @@ export const createExcelValidationSchema = (lists) => {
         return list.includes(value);
       });
 
-  // Хелпер: необязательное поле с regex (валидируем только если заполнено)
+  // Хелпер: необязательное поле с правилом из единого источника
+  const optionalWithRule = (ruleName) => {
+    const rule = VALIDATION_RULES[ruleName];
+    if (!rule) return yup.string();
+    return yup
+      .string()
+      .transform((value) => (value ? value.trim() : value))
+      .test("regex-if-filled", rule.message, (value, context) => {
+        const originalValue = context.originalValue;
+        if (originalValue && originalValue.trim() === "" && originalValue !== "") {
+          return false;
+        }
+        if (!value || value === "") return true;
+        return rule.regex.test(value);
+      });
+  };
+
+  // Хелпер: необязательное поле с regex (для обратной совместимости)
   const optionalWithRegex = (regex, message) =>
     yup
       .string()
@@ -57,6 +75,58 @@ export const createExcelValidationSchema = (lists) => {
         if (!value || value === "") return true;
         return regex.test(value);
       });
+
+  // Хелпер: создание валидации для поля сетевого кода
+  const networkCodeFieldValidation = (fieldName) => {
+    const fieldRule = NETWORK_CODE_FIELD_RULES[fieldName];
+    if (!fieldRule) return yup.string();
+
+    return yup
+      .string()
+      .trim()
+      .test(`network-code-${fieldName}`, "Ошибка валидации", function (value) {
+        const parent = this.parent;
+        const hasAnyValue = NETWORK_CODE_FIELDS.some((f) => parent[f] && parent[f].trim() !== "");
+
+        // Если ни одно поле не заполнено - пропускаем
+        if (!hasAnyValue) return true;
+
+        // Если какое-то заполнено, но это пустое - ошибка
+        if (!value || value === "") {
+          return this.createError({ message: "Заполните поле" });
+        }
+        // Проверка на пробелы
+        if (value.includes(" ")) {
+          return this.createError({ message: "Пробелы не допускаются" });
+        }
+        // Проверка по частичному regex
+        if (fieldRule.partialRegex && !fieldRule.partialRegex.test(value)) {
+          if (fieldRule.regex.source.includes("А-ЯA-Z")) {
+            return this.createError({ message: "Только цифры и заглавные буквы" });
+          }
+          return this.createError({ message: "Только цифры" });
+        }
+        // Проверка длины
+        if (fieldRule.exactLength) {
+          if (value.length > fieldRule.exactLength) {
+            return this.createError({
+              message: `Максимум ${fieldRule.exactLength} ${fieldRule.exactLength === 3 ? "цифры" : "символа"}`,
+            });
+          }
+          if (value.length < fieldRule.exactLength) {
+            return this.createError({ message: fieldRule.message });
+          }
+        }
+        // Специальная проверка для Кода ПС - проверка в справочнике
+        if (fieldRule.checkInList && value.length === fieldRule.exactLength) {
+          const result = validateNetworkCode(value);
+          if (!result.valid) {
+            return this.createError({ message: result.message });
+          }
+        }
+        return true;
+      });
+  };
 
   return yup.object().shape({
     // === Обязательные поля из справочников ===
@@ -93,19 +163,19 @@ export const createExcelValidationSchema = (lists) => {
     "Статус счета": requiredFromList(statusList, "Статус счета"),
     "Модель счетчика": requiredFromList(deviceList, "Модель счетчика"),
 
-    // === Необязательные поля с форматом ===
-    Дом: optionalWithRegex(/^\d*$/, "Только цифры"),
-    "Квартира (офис)": optionalWithRegex(/^\d*$/, "Только цифры"),
-    "Корпус (литера)": optionalWithRegex(/^[А-ЯA-Z]*$/, "Только заглавные буквы"),
-    "Кол-во фаз": optionalWithRegex(/^\d{0,2}$/, "Максимум 1 цифра"),
-    "Заводской номер": optionalWithRegex(/^\d*$/, "Только цифры"),
-    "Дата поверки": optionalWithRegex(/^\d{2}\.\d{2}\.\d{4}$/, "Формат ДД.ММ.ГГГГ"),
-    "Дата установки": optionalWithRegex(/^\d{2}\.\d{2}\.\d{4}$/, "Формат ДД.ММ.ГГГГ"),
-    "Межповерочный интервал, лет": optionalWithRegex(/^\d{1,2}$/, "Только цифры, максимум 2"),
-    "Коэффициент (итоговый)": optionalWithRegex(/^\d*$/, "Только цифры"),
-    Порт: optionalWithRegex(/^\d*$/, "Только цифры"),
-    "Номер коммуникатора (для счетчиков РиМ)": optionalWithRegex(/^\d*$/, "Только цифры"),
-    "Максимальная мощность, кВт": optionalWithRegex(/^\d*$/, "Только цифры"),
+    // === Необязательные поля с форматом (используем единые правила) ===
+    Дом: optionalWithRule("digits"),
+    "Квартира (офис)": optionalWithRule("digits"),
+    "Корпус (литера)": optionalWithRule("uppercaseLetters"),
+    "Кол-во фаз": optionalWithRule("twoDigits"),
+    "Заводской номер": optionalWithRule("serialNumber"),
+    "Дата поверки": optionalWithRule("dateFormat"),
+    "Дата установки": optionalWithRule("dateFormat"),
+    "Межповерочный интервал, лет": optionalWithRule("intervals"),
+    "Коэффициент (итоговый)": optionalWithRule("coefficients"),
+    Порт: optionalWithRule("port"),
+    "Номер коммуникатора (для счетчиков РиМ)": optionalWithRule("communicatorNumber"),
+    "Максимальная мощность, кВт": optionalWithRule("maxPower"),
     "Номер сим карты (короткий)": yup
       .string()
       .trim()
@@ -122,12 +192,13 @@ export const createExcelValidationSchema = (lists) => {
         // Если это поле пустое, но полный номер заполнен - ок
         if (!hasShortSim) return true;
 
-        // Проверяем формат если заполнено
-        if (!/^\d*$/.test(value)) {
+        // Используем правило из единого источника
+        const rule = VALIDATION_RULES.simCardShort;
+        if (!rule.regex.test(value)) {
           return this.createError({ message: "Только цифры" });
         }
-        if (value.length > 5) {
-          return this.createError({ message: "Максимум 5 цифр" });
+        if (value.length > rule.maxLength) {
+          return this.createError({ message: `Максимум ${rule.maxLength} цифр` });
         }
         return true;
       }),
@@ -147,219 +218,40 @@ export const createExcelValidationSchema = (lists) => {
         // Если это поле пустое, но короткий номер заполнен - ок
         if (!hasFullSim) return true;
 
-        // Проверяем формат если заполнено
-        if (!/^\d*$/.test(value)) {
-          return this.createError({ message: "Только цифры" });
-        }
-        if (value.length > 11) {
-          return this.createError({ message: "Максимум 11 цифр" });
-        }
-        if (value.length >= 2 && !value.startsWith("89")) {
-          return this.createError({ message: "Должен начинаться с 89" });
-        }
-        if (value.length < 11) {
-          return this.createError({ message: "Введите 11 цифр" });
+        // Используем функцию полной валидации из единого источника
+        const validation = VALIDATION_RULES.simCardFull.validateFull(value);
+        if (!validation.valid) {
+          return this.createError({ message: validation.message });
         }
         return true;
       }),
 
     // === Поля сетевого кода (если хотя бы одно заполнено - все обязательны) ===
-    "Код ПС ((220)110/35-10(6)кВ": yup
-      .string()
-      .trim()
-      .test("ps-code", "Ошибка в коде ПС", function (value) {
-        const parent = this.parent;
-        const networkCodeFields = [
-          "Код ПС ((220)110/35-10(6)кВ",
-          "Номер фидера 10(6)(3) кВ",
-          "Номер ТП 10(6)/0,4 кВ",
-          "Номер фидера 0,4 кВ",
-          "Код потребителя 3х-значный",
-        ];
-        const hasAnyValue = networkCodeFields.some((f) => parent[f] && parent[f].trim() !== "");
+    "Код ПС ((220)110/35-10(6)кВ": networkCodeFieldValidation("Код ПС ((220)110/35-10(6)кВ"),
 
-        // Если ни одно поле не заполнено - пропускаем
-        if (!hasAnyValue) return true;
+    "Номер фидера 10(6)(3) кВ": networkCodeFieldValidation("Номер фидера 10(6)(3) кВ"),
 
-        // Если какое-то заполнено, но это пустое - ошибка
-        if (!value || value === "") {
-          return this.createError({ message: "Заполните поле" });
-        }
-        // Проверка на пробелы
-        if (value.includes(" ")) {
-          return this.createError({ message: "Пробелы не допускаются" });
-        }
-        // Код ПС: только цифры, ровно 3 символа
-        if (!/^\d*$/.test(value)) {
-          return this.createError({ message: "Только цифры" });
-        }
-        if (value.length > 3) {
-          return this.createError({ message: "Максимум 3 цифры" });
-        }
-        if (value.length < 3) {
-          return this.createError({ message: "Введите 3 цифры" });
-        }
-        // Проверка в справочнике при полном коде
-        if (value.length === 3) {
-          const result = validateNetworkCode(value);
-          if (!result.valid) {
-            return this.createError({ message: result.message });
-          }
-        }
-        return true;
-      }),
+    "Номер ТП 10(6)/0,4 кВ": networkCodeFieldValidation("Номер ТП 10(6)/0,4 кВ"),
 
-    "Номер фидера 10(6)(3) кВ": yup
-      .string()
-      .trim()
-      .test("feeder-10", "Ошибка в номере фидера 10кВ", function (value) {
-        const parent = this.parent;
-        const networkCodeFields = [
-          "Код ПС ((220)110/35-10(6)кВ",
-          "Номер фидера 10(6)(3) кВ",
-          "Номер ТП 10(6)/0,4 кВ",
-          "Номер фидера 0,4 кВ",
-          "Код потребителя 3х-значный",
-        ];
-        const hasAnyValue = networkCodeFields.some((f) => parent[f] && parent[f].trim() !== "");
+    "Номер фидера 0,4 кВ": networkCodeFieldValidation("Номер фидера 0,4 кВ"),
 
-        if (!hasAnyValue) return true;
-
-        if (!value || value === "") {
-          return this.createError({ message: "Заполните поле" });
-        }
-        // Проверка на пробелы
-        if (value.includes(" ")) {
-          return this.createError({ message: "Пробелы не допускаются" });
-        }
-        // Только цифры, ровно 3 символа
-        if (!/^\d*$/.test(value)) {
-          return this.createError({ message: "Только цифры" });
-        }
-        if (value.length > 3) {
-          return this.createError({ message: "Максимум 3 цифры" });
-        }
-        if (value.length < 3) {
-          return this.createError({ message: "Введите 3 цифры" });
-        }
-        return true;
-      }),
-
-    "Номер ТП 10(6)/0,4 кВ": yup
-      .string()
-      .trim()
-      .test("tp-number", "Ошибка в номере ТП", function (value) {
-        const parent = this.parent;
-        const networkCodeFields = [
-          "Код ПС ((220)110/35-10(6)кВ",
-          "Номер фидера 10(6)(3) кВ",
-          "Номер ТП 10(6)/0,4 кВ",
-          "Номер фидера 0,4 кВ",
-          "Код потребителя 3х-значный",
-        ];
-        const hasAnyValue = networkCodeFields.some((f) => parent[f] && parent[f].trim() !== "");
-
-        if (!hasAnyValue) return true;
-
-        if (!value || value === "") {
-          return this.createError({ message: "Заполните поле" });
-        }
-        // Проверка на пробелы
-        if (value.includes(" ")) {
-          return this.createError({ message: "Пробелы не допускаются" });
-        }
-        // Цифры и заглавные буквы, ровно 2 символа
-        if (!/^[\dА-ЯA-Z]*$/.test(value)) {
-          return this.createError({ message: "Только цифры и заглавные буквы" });
-        }
-        if (value.length > 2) {
-          return this.createError({ message: "Максимум 2 символа" });
-        }
-        if (value.length < 2) {
-          return this.createError({ message: "Введите 2 символа" });
-        }
-        return true;
-      }),
-
-    "Номер фидера 0,4 кВ": yup
-      .string()
-      .trim()
-      .test("feeder-04", "Ошибка в номере фидера 0,4кВ", function (value) {
-        const parent = this.parent;
-        const networkCodeFields = [
-          "Код ПС ((220)110/35-10(6)кВ",
-          "Номер фидера 10(6)(3) кВ",
-          "Номер ТП 10(6)/0,4 кВ",
-          "Номер фидера 0,4 кВ",
-          "Код потребителя 3х-значный",
-        ];
-        const hasAnyValue = networkCodeFields.some((f) => parent[f] && parent[f].trim() !== "");
-
-        if (!hasAnyValue) return true;
-
-        if (!value || value === "") {
-          return this.createError({ message: "Заполните поле" });
-        }
-        // Проверка на пробелы
-        if (value.includes(" ")) {
-          return this.createError({ message: "Пробелы не допускаются" });
-        }
-        // Цифры и заглавные буквы, ровно 2 символа
-        if (!/^[\dА-ЯA-Z]*$/.test(value)) {
-          return this.createError({ message: "Только цифры и заглавные буквы" });
-        }
-        if (value.length > 2) {
-          return this.createError({ message: "Максимум 2 символа" });
-        }
-        if (value.length < 2) {
-          return this.createError({ message: "Введите 2 символа" });
-        }
-        return true;
-      }),
-
-    "Код потребителя 3х-значный": yup
-      .string()
-      .trim()
-      .test("consumer-code", "Ошибка в коде потребителя", function (value) {
-        const parent = this.parent;
-        const networkCodeFields = [
-          "Код ПС ((220)110/35-10(6)кВ",
-          "Номер фидера 10(6)(3) кВ",
-          "Номер ТП 10(6)/0,4 кВ",
-          "Номер фидера 0,4 кВ",
-          "Код потребителя 3х-значный",
-        ];
-        const hasAnyValue = networkCodeFields.some((f) => parent[f] && parent[f].trim() !== "");
-
-        if (!hasAnyValue) return true;
-
-        if (!value || value === "") {
-          return this.createError({ message: "Заполните поле" });
-        }
-        // Проверка на пробелы
-        if (value.includes(" ")) {
-          return this.createError({ message: "Пробелы не допускаются" });
-        }
-        // Только цифры, ровно 3 символа
-        if (!/^\d*$/.test(value)) {
-          return this.createError({ message: "Только цифры" });
-        }
-        if (value.length > 3) {
-          return this.createError({ message: "Максимум 3 цифры" });
-        }
-        if (value.length < 3) {
-          return this.createError({ message: "Введите 3 цифры" });
-        }
-        return true;
-      }),
+    "Код потребителя 3х-значный": networkCodeFieldValidation("Код потребителя 3х-значный"),
 
     // Номер трансформаторной подстанции - обязательное поле, только цифры, максимум 5
     "Номер трансформаторной подстанции": yup
       .string()
       .trim()
       .required("Обязательное поле")
-      .matches(/^\d*$/, "Только цифры")
-      .max(5, "Максимум 5 цифр"),
+      .test("transformer-validation", "Ошибка валидации", function (value) {
+        const rule = VALIDATION_RULES.transformerNumber;
+        if (!rule.regex.test(value)) {
+          return this.createError({ message: rule.message });
+        }
+        if (value.length > rule.maxLength) {
+          return this.createError({ message: `Максимум ${rule.maxLength} цифр` });
+        }
+        return true;
+      }),
   });
 };
 

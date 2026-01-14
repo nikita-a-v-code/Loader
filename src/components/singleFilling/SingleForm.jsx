@@ -93,8 +93,8 @@ const SingleForm = () => {
     networkAddress: "",
     simCardShort: "",
     simCardFull: "",
-    ipAddress: "192.168.0.73",
-    protocol: "TCP",
+    ipAddress: "",
+    protocol: "",
     communicatorNumber: "",
     comPorts: "",
     port: "",
@@ -167,6 +167,17 @@ const SingleForm = () => {
       setDeviceTypes(deviceData);
       setIpAddresses(ipData);
       setProtocols(protocolData);
+      
+      // Получаем дефолтные значения из справочников
+      const defaultIp = ipData.find((item) => item.is_default)?.address || ipData[0]?.address || "";
+      const defaultProtocol = protocolData.find((item) => item.is_default)?.name || protocolData[0]?.name || "";
+      
+      // Обновляем дефолтные значения в форме, если они еще не заполнены
+      setFormData(prev => ({
+        ...prev,
+        ipAddress: prev.ipAddress || defaultIp,
+        protocol: prev.protocol || defaultProtocol,
+      }));
     } catch (err) {
       console.error("Error loading data:", err);
       setError(err);

@@ -1,21 +1,24 @@
 /**
  * Вспомогательные константы и функции валидации для ExcelFormImporter.
+ * Использует единые правила из validationRules.js
  */
 import { validateNetworkCode } from "../../../utils/networkCodeValidation";
+import {
+  VALIDATION_RULES,
+  EXCEL_FIELD_RULES,
+  NETWORK_CODE_FIELDS as NC_FIELDS,
+  NETWORK_CODE_FIELD_RULES,
+  SIM_CARD_FIELDS as SC_FIELDS,
+  getExcelFieldRule,
+  getRuleMessage,
+} from "../../../utils/Validation/validationRules";
 
-// Поля сетевого кода для inline-валидации
-export const NETWORK_CODE_FIELDS = [
-  "Код ПС ((220)110/35-10(6)кВ",
-  "Номер фидера 10(6)(3) кВ",
-  "Номер ТП 10(6)/0,4 кВ",
-  "Номер фидера 0,4 кВ",
-  "Код потребителя 3х-значный",
-];
+// Реэкспортируем константы для обратной совместимости
+export const NETWORK_CODE_FIELDS = NC_FIELDS;
+export const SIM_CARD_FIELDS = SC_FIELDS;
 
-// Поля SIM-карты (логика: заполнено хотя бы одно)
-export const SIM_CARD_FIELDS = ["Номер сим карты (короткий)", "Номер сим карты (полный)"];
-
-// Валидация отдельного поля сетевого кода
+// Валидация отдельного поля сетевого кода. field, value - какое поле редактируется и его значение.
+// row - вся строка данных, touchedFields - множество полей, которые пользователь уже редактировал.
 export const validateNetworkCodeField = (field, value, row = {}, touchedFields = new Set()) => {
   const trimmed = (value || "").trim();
   const original = value || "";
@@ -35,44 +38,36 @@ export const validateNetworkCodeField = (field, value, row = {}, touchedFields =
     return "Заполните поле";
   }
 
-  switch (field) {
-    case "Код ПС ((220)110/35-10(6)кВ": {
-      if (!/^\d*$/.test(trimmed)) return "Только цифры";
-      if (trimmed.length > 3) return "Максимум 3 цифры";
-      if (trimmed.length < 3) return "Введите 3 цифры";
-      if (trimmed.length === 3) {
-        const result = validateNetworkCode(trimmed);
-        if (!result.valid) return result.message;
-      }
-      return null;
+  // Получаем правило для поля из единого источника
+  const fieldRule = NETWORK_CODE_FIELD_RULES[field];
+  if (!fieldRule) return null;
+
+  // Проверяем частичный regex (для ввода)
+  if (fieldRule.partialRegex && !fieldRule.partialRegex.test(trimmed)) {
+    // Определяем тип ошибки
+    if (fieldRule.regex.source.includes("А-ЯA-Z")) {
+      return "Только цифры и заглавные буквы";
     }
-    case "Номер фидера 10(6)(3) кВ": {
-      if (!/^\d*$/.test(trimmed)) return "Только цифры";
-      if (trimmed.length > 3) return "Максимум 3 цифры";
-      if (trimmed.length < 3) return "Введите 3 цифры";
-      return null;
-    }
-    case "Номер ТП 10(6)/0,4 кВ": {
-      if (!/^[\dА-ЯA-Z]*$/.test(trimmed)) return "Только цифры и заглавные буквы";
-      if (trimmed.length > 2) return "Максимум 2 символа";
-      if (trimmed.length < 2) return "Введите 2 символа";
-      return null;
-    }
-    case "Номер фидера 0,4 кВ": {
-      if (!/^[\dА-ЯA-Z]*$/.test(trimmed)) return "Только цифры и заглавные буквы";
-      if (trimmed.length > 2) return "Максимум 2 символа";
-      if (trimmed.length < 2) return "Введите 2 символа";
-      return null;
-    }
-    case "Код потребителя 3х-значный": {
-      if (!/^\d*$/.test(trimmed)) return "Только цифры";
-      if (trimmed.length > 3) return "Максимум 3 цифры";
-      if (trimmed.length < 3) return "Введите 3 цифры";
-      return null;
-    }
-    default:
-      return null;
+    return "Только цифры";
   }
+
+  // Проверяем длину
+  if (fieldRule.exactLength) {
+    if (trimmed.length > fieldRule.exactLength) {
+      return `Максимум ${fieldRule.exactLength} ${fieldRule.exactLength === 3 ? "цифры" : "символа"}`;
+    }
+    if (trimmed.length < fieldRule.exactLength) {
+      return fieldRule.message;
+    }
+  }
+
+  // Специальная проверка для Кода ПС - проверка в справочнике
+  if (fieldRule.checkInList && trimmed.length === fieldRule.exactLength) {
+    const result = validateNetworkCode(trimmed);
+    if (!result.valid) return result.message;
+  }
+
+  return null;
 };
 
 // Валидация полей SIM-карты (короткий/полный) для inline-режима
@@ -92,23 +87,21 @@ export const getSimFieldErrors = (row) => {
     return errors;
   }
 
+  // Валидация короткого номера
   if (hasShort) {
-    if (!/^\d*$/.test(shortVal)) {
+    const shortRule = VALIDATION_RULES.simCardShort;
+    if (!shortRule.regex.test(shortVal)) {
       errors[shortKey] = "Только цифры";
-    } else if (shortVal.length > 5) {
-      errors[shortKey] = "Максимум 5 цифр";
+    } else if (shortVal.length > shortRule.maxLength) {
+      errors[shortKey] = `Максимум ${shortRule.maxLength} цифр`;
     }
   }
 
+  // Валидация полного номера
   if (hasFull) {
-    if (!/^\d*$/.test(fullVal)) {
-      errors[fullKey] = "Только цифры";
-    } else if (fullVal.length > 11) {
-      errors[fullKey] = "Максимум 11 цифр";
-    } else if (fullVal.length >= 2 && !fullVal.startsWith("89")) {
-      errors[fullKey] = "Должен начинаться с 89";
-    } else if (fullVal.length < 11) {
-      errors[fullKey] = "Введите 11 цифр";
+    const fullValidation = VALIDATION_RULES.simCardFull.validateFull(fullVal);
+    if (!fullValidation.valid) {
+      errors[fullKey] = fullValidation.message;
     }
   }
 
@@ -128,13 +121,14 @@ export const getTransformerFieldErrors = (row) => {
     return errors;
   }
 
-  if (!/^\d*$/.test(transformerVal)) {
-    errors[transformerKey] = "Только цифры";
+  const rule = VALIDATION_RULES.transformerNumber;
+  if (!rule.regex.test(transformerVal)) {
+    errors[transformerKey] = rule.message;
     return errors;
   }
 
-  if (transformerVal.length > 5) {
-    errors[transformerKey] = "Максимум 5 цифр";
+  if (transformerVal.length > rule.maxLength) {
+    errors[transformerKey] = `Максимум ${rule.maxLength} цифр`;
     return errors;
   }
 
@@ -154,24 +148,9 @@ export const validateSimpleField = (field, value) => {
   // Если поле пустое - пропускаем валидацию (необязательные поля)
   if (!trimmed) return null;
 
-  const validationRules = {
-    Дом: { regex: /^\d*$/, message: "Только цифры" },
-    "Квартира (офис)": { regex: /^\d*$/, message: "Только цифры" },
-    "Корпус (литера)": { regex: /^[А-ЯA-Z]*$/, message: "Только заглавные буквы" },
-    "Кол-во фаз": { regex: /^\d{0,2}$/, message: "Максимум 1 цифра" },
-    "Заводской номер": { regex: /^\d*$/, message: "Только цифры" },
-    "Дата поверки": { regex: /^\d{2}\.\d{2}\.\d{4}$/, message: "Формат ДД.ММ.ГГГГ" },
-    "Дата установки": { regex: /^\d{2}\.\d{2}\.\d{4}$/, message: "Формат ДД.ММ.ГГГГ" },
-    "Межповерочный интервал, лет": { regex: /^\d{1,2}$/, message: "Только цифры, максимум 2" },
-    "Коэффициент (итоговый)": { regex: /^\d*$/, message: "Только цифры" },
-    Порт: { regex: /^\d*$/, message: "Только цифры" },
-    "Номер коммуникатора (для счетчиков РиМ)": { regex: /^\d*$/, message: "Только цифры" },
-    "Максимальная мощность, кВт": { regex: /^\d*$/, message: "Только цифры" },
-  };
-
-  const rule = validationRules[field];
-  if (!rule) return null; // Нет правила для этого поля
-
+  // Получаем правило из единого источника
+  const rule = getExcelFieldRule(field);
+  if (!rule) return null;
   if (!rule.regex.test(trimmed)) {
     return rule.message;
   }

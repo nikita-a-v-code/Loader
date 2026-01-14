@@ -108,20 +108,12 @@ const useExcelData = () => {
   );
 
   /**
-   * Нормализует название модели счетчика.
-   */
-  const normalizeModel = (str) => {
-    if (!str) return "";
-    return str.toLowerCase().replace(/[\s-]/g, "");
-  };
-
-  /**
    * Заполняет пароли для моделей счетчиков (только для отправки на email).
    */
   const autofillPasswords = useCallback(
     (dataRows = null) => {
       const rowsToProcess = dataRows || rows;
-
+      // Из объекта row (строки Excel) взять значение поля 'Модель счетчика' и 'Пароль на конфигурирование'
       const updated = rowsToProcess.map((row) => {
         const modelValue = row["Модель счетчика"];
         const passwordValue = row["Пароль на конфигурирование"] || "";
@@ -180,6 +172,7 @@ const useExcelData = () => {
   const autofillIpAddresses = useCallback(
     (dataRows = null) => {
       const rowsToProcess = dataRows || rows;
+      // В ipAddressList ищем строку в которой поле item.is_default true
       const defaultIpAddress =
         ipAddressList.find((item) => item.is_default)?.address || ipAddressList[0]?.address || "";
 
@@ -192,6 +185,7 @@ const useExcelData = () => {
             "IP адрес": defaultIpAddress,
           };
         }
+        // Если IP уже заполнен оставляем как есть
         return row;
       });
 
@@ -288,7 +282,8 @@ const useExcelData = () => {
   const validateAll = useCallback(async () => {
     const uniqueSettlements = [...new Set(rows.map((row) => row["Населенный пункт"]).filter(Boolean))];
 
-    // Загружаем улицы и собираем результаты напрямую (не ждём обновления state)
+    // Загружаем улицы и собираем результаты напрямую (не ждём обновления state).
+    // Promise.all дает параллельную загрузку для оптимизации для всех населенных пунктов загрузка идет параллельно.
     const streetsResults = await Promise.all(
       uniqueSettlements.map((settlementName) => loadStreetsForSettlement(settlementName))
     );
@@ -339,6 +334,7 @@ const useExcelData = () => {
    */
   const getOptionsForField = useCallback(
     (header, row = {}) => {
+      // Убираем из заголовков лишние символы если есть
       const h = (header || "").trim();
 
       const optionsMap = {

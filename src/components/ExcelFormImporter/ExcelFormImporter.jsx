@@ -84,12 +84,9 @@ const ExcelFormImporter = () => {
         // Парсим Excel файл
         const { headers: hdrs, rows: content } = await parseExcelFile(file);
 
-        // Применяем автозаполнение протоколов
-        const processedContent = autofillProtocols(content);
-
         // Сбрасываем все состояния для нового файла
         setHeaders(hdrs);
-        setRows(processedContent);
+        setRows(content);
         setErrors({});
         setValidationSuccess(false);
         setTouchedFields({});
@@ -102,7 +99,7 @@ const ExcelFormImporter = () => {
         setFileLoading(false);
       }
     },
-    [autofillProtocols, setHeaders, setRows, setErrors, setValidationSuccess, setTouchedFields]
+    [setHeaders, setRows, setErrors, setValidationSuccess, setTouchedFields]
   );
 
   /**
@@ -247,10 +244,11 @@ const ExcelFormImporter = () => {
       let processed = calculateNetworkAddresses(data); // Расчет сетевых адресов
       processed = autofillPasswords(processed); // Пароли для счетчиков
       processed = autofillIpAddresses(processed); // IP адреса
+      processed = autofillProtocols(processed); // Автозаполнение протоколов
       processed = await assignPortsToRows(processed); // Назначение портов
       return processed;
     },
-    [calculateNetworkAddresses, autofillPasswords, autofillIpAddresses, assignPortsToRows]
+    [calculateNetworkAddresses, autofillPasswords, autofillIpAddresses, autofillProtocols, assignPortsToRows]
   );
 
   // === Хук для управления отправкой на email ===

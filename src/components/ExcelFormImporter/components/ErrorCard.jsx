@@ -118,7 +118,7 @@ const ErrorCard = ({
     >
       <CardContent>
         <Typography variant="h6" gutterBottom sx={{ mb: 1, color: "error.main" }}>
-          Точка учета #{rowIndex + 1} (из Excel файла)
+          Точка учета {row["Наименование потребителя"]} (из Excel файла)
         </Typography>
         <Typography variant="body2" gutterBottom sx={{ mb: 2, color: "text.secondary" }}>
           Ошибочные поля: {errorFields.join(", ")}

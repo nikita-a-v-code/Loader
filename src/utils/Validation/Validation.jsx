@@ -1,60 +1,11 @@
 import { useState } from "react";
+import { VALIDATION_RULES, validateByRule } from "./validationRules";
 
-// Функции валидации
+// Экспортируем validators как алиас для VALIDATION_RULES для обратной совместимости
 export const validators = {
-  digits: {
-    regex: /^\d*$/,
-    message: "Только цифры",
-  },
-  uppercaseLetters: {
-    regex: /^[А-ЯA-Z]*$/,
-    message: "Только заглавные буквы",
-  },
-  twoDigits: {
-    regex: /^\d{0,2}$/,
-    message: "Максимум 2 цифры",
-  },
-  dateFormat: {
-    regex: /^[\d.]*$/,
-    message: "Формат ДД.ММ.ГГГГ",
-  },
-  serialNumber: {
-    regex: /^\d*$/,
-    message: "Только цифры",
-  },
-  simCardShort: {
-    regex: /^\d*$/,
-    message: "До 5 цифр",
-    validate: (value) => {
-      if (value.length > 5) return false;
-      return /^\d*$/.test(value);
-    },
-  },
-  simCardFull: {
-    regex: /^\d*$/,
-    message: "11 цифр, начинается с восьмерки",
-    validate: (value) => {
-      if (value.length > 11) return false;
-      if (value.length >= 2 && !value.startsWith("89")) return false;
-      return /^\d*$/.test(value);
-    },
-  },
-  port: {
-    regex: /^\d*$/,
-    message: "Только цифры",
-  },
-  communicatorNumber: {
-    regex: /^\d*$/,
-    message: "Только цифры",
-  },
-  coefficients: {
-    regex: /^\d*$/,
-    message: "Только цифры",
-  },
-  intervals: {
-    regex: /^\d{0,2}$/,
-    message: "Только цифры, максимум 2",
-  },
+  ...VALIDATION_RULES,
+  // Переименовываем dateInput в dateFormat для совместимости с существующим кодом
+  dateFormat: VALIDATION_RULES.dateInput,
 };
 
 // Хук для управления ошибками валидации
@@ -93,10 +44,7 @@ export const useValidationErrors = () => {
 
 // Функция валидации поля
 export const validateField = (value, validator) => {
-  if (validator.validate) {
-    return validator.validate(value);
-  }
-  return validator.regex.test(value);
+  return validateByRule(value, validator);
 };
 
 // Форматирование даты
