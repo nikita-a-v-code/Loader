@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import ErrorAlert from "../../../ui/ErrorAlert";
 import EmailSenderDialog from "../../../ui/EmailSenderDialog";
-import { useExportData } from "../../../hooks/useExportData";
-import { useConnectionData, useEmailSender } from "./hooks";
+import ApiService from "../../../services/api";
+import { useConnectionData } from "./hooks";
 import { ConnectionPointCard, ConnectionActions } from "./components";
+import { useAuth } from "../../../context/AuthContext";
 
 /**
  * Компонент управления подключениями точек учета.
@@ -22,6 +23,7 @@ const Connection = ({
   addressData = {},
   networkData = {},
 }) => {
+  const { user } = useAuth();
   // Хук для управления данными подключения
   const {
     ipAddresses,
@@ -49,52 +51,151 @@ const Connection = ({
     consumerData,
   });
 
-  // Данные для экспорта (без порта)
-  const exportDataWithoutPort = useExportData({
-    pointsCount,
-    structureData,
-    addressData,
-    consumerData,
-    networkData,
-    deviceData,
-    transformData,
-    connectionData: connectionPoints,
-    calculateNetworkAddress: getNetworkAddress,
-    calculateFinalCoeff,
-    includePort: false,
-  });
+  // Состояние для диалога email
+  const [emailDialog, setEmailDialog] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailMessage, setEmailMessage] = useState({ text: "", type: "success" });
 
-  // Данные для экспорта (с портом)
-  const exportDataWithPort = useExportData({
-    pointsCount,
-    structureData,
-    addressData,
-    consumerData,
-    networkData,
-    deviceData,
-    transformData,
-    connectionData: connectionPoints,
-    calculateNetworkAddress: getNetworkAddress,
-    calculateFinalCoeff,
-    includePort: true,
-  });
+  // Загрузка дефолтного email
+  React.useEffect(() => {
+    ApiService.getDefaultEmail()
+      .then((resp) => {
+        if (resp?.defaultEmail) {
+          setEmail(resp.defaultEmail);
+        }
+      })
+      .catch((err) => {
+        console.error("Не удалось получить дефолтный email:", err);
+      });
+  }, []);
 
-  // Хук для управления отправкой на email
-  const {
-    emailDialog,
-    email,
-    emailSending,
-    emailMessage,
-    openDialog,
-    closeDialog,
-    handleEmailChange,
-    handleSendToEmail,
-    handleExportToExcel,
-  } = useEmailSender({
-    exportDataWithPort,
-    assignPortsToConnections,
-    portsAssigned,
-  });
+  // Функция для генерации данных экспорта с актуальными портами
+  const generateExportData = (updatedPoints, includePort, isAdminExport) => {
+    const data = [];
+    for (let i = 0; i < pointsCount; i++) {
+      const point = {
+        mpes: structureData[i]?.s1 || "",
+        rkes: structureData[i]?.s2 || "",
+        masterUnit: structureData[i]?.s3 || "",
+        settlement: addressData[i]?.settlement || "",
+        microdistrict: addressData[i]?.microdistrict || "",
+        street: addressData[i]?.street || "",
+        house: addressData[i]?.house || "",
+        building: addressData[i]?.building || "",
+        apartment: addressData[i]?.apartment || "",
+        consumerName: consumerData[i]?.consumerName || "",
+        deliveryPoint: consumerData[i]?.deliveryPoint || "",
+        subscriberType: consumerData[i]?.subscriberType || "",
+        accountStatus: consumerData[i]?.accountStatus || "",
+        contractNumber: consumerData[i]?.contractNumber || "",
+        networkCode: networkData[i]?.networkCode || "",
+        transformerSubstationNumber: networkData[i]?.transformerSubstationNumber || "",
+        numberSupport04: networkData[i]?.numberSupport04 || "",
+        maxPower: networkData[i]?.maxPower || "",
+        deviceModel: deviceData[i]?.typeDevice || "",
+        numberPhases: deviceData[i]?.numberPhases || "",
+        serialNumber: deviceData[i]?.serialNumber || "",
+        verificationDate: deviceData[i]?.verificationDate || "",
+        verificationInterval: deviceData[i]?.verificationInterval || "",
+        dateInstallation: deviceData[i]?.dateInstallation || "",
+        numberTerminal: deviceData[i]?.numberTerminal || "",
+        numberCasing: deviceData[i]?.numberCasing || "",
+        password: deviceData[i]?.password || "",
+        note: deviceData[i]?.note || "",
+        ttType: transformData[i]?.ttType || "",
+        ttSerialA: transformData[i]?.ttSerialA || "",
+        ttSerialB: transformData[i]?.ttSerialB || "",
+        ttSerialC: transformData[i]?.ttSerialC || "",
+        ttDateA: transformData[i]?.ttDateA || "",
+        ttIntervalA: transformData[i]?.ttIntervalA || "",
+        ttDateB: transformData[i]?.ttDateB || "",
+        ttIntervalB: transformData[i]?.ttIntervalB || "",
+        ttDateC: transformData[i]?.ttDateC || "",
+        ttIntervalC: transformData[i]?.ttIntervalC || "",
+        ttCoeff: transformData[i]?.ttCoeff || "1",
+        ttSealA: transformData[i]?.ttSealA || "",
+        ttSealB: transformData[i]?.ttSealB || "",
+        ttSealC: transformData[i]?.ttSealC || "",
+        tnType: transformData[i]?.tnType || "",
+        tnSerialA: transformData[i]?.tnSerialA || "",
+        tnSerialB: transformData[i]?.tnSerialB || "",
+        tnSerialC: transformData[i]?.tnSerialC || "",
+        tnDateA: transformData[i]?.tnDateA || "",
+        tnIntervalA: transformData[i]?.tnIntervalA || "",
+        tnDateB: transformData[i]?.tnDateB || "",
+        tnIntervalB: transformData[i]?.tnIntervalB || "",
+        tnDateC: transformData[i]?.tnDateC || "",
+        tnIntervalC: transformData[i]?.tnIntervalC || "",
+        tnCoeff: transformData[i]?.tnCoeff || "1",
+        tnSealA: transformData[i]?.tnSealA || "",
+        tnSealB: transformData[i]?.tnSealB || "",
+        tnSealC: transformData[i]?.tnSealC || "",
+        networkAddress: getNetworkAddress(i) || updatedPoints[i]?.networkAddress || "",
+        simCardFull: updatedPoints[i]?.simCardFull || "",
+        simCardShort: updatedPoints[i]?.simCardShort || "",
+        ipAddress: updatedPoints[i]?.ipAddress || "",
+        ...(includePort || isAdminExport ? { port: updatedPoints[i]?.port || "" } : {}),
+        communicatorNumber: updatedPoints[i]?.communicatorNumber || "",
+        protocol: updatedPoints[i]?.protocol || "",
+        finalCoeff: calculateFinalCoeff(i) || "",
+        comPorts: updatedPoints[i]?.comPorts || "",
+        advSettings: updatedPoints[i]?.advSettings || deviceData[i]?.advSettings || "",
+        nameConnection: updatedPoints[i]?.nameConnection || "",
+        requests: updatedPoints[i]?.requests || deviceData[i]?.requests || "",
+        nameUSPD: updatedPoints[i]?.nameUSPD || "",
+        typeUSPD: updatedPoints[i]?.typeUSPD || "",
+        numberUSPD: updatedPoints[i]?.numberUSPD || "",
+        userUSPD: updatedPoints[i]?.userUSPD || "",
+        passwordUSPD: updatedPoints[i]?.passwordUSPD || "",
+      };
+
+      // Удаляем поля для не-админов
+      if (!isAdminExport) {
+        delete point.networkAddress;
+        delete point.ipAddress;
+        delete point.password;
+        delete point.protocol;
+        delete point.port;
+        delete point.requests;
+        delete point.advSettings;
+      }
+
+      data.push(point);
+    }
+    return data;
+  };
+
+  // Функция для экспорта в Excel (порты создаются только для админа)
+  const handleExport = async () => {
+    try {
+      const exportData = generateExportData(connectionPoints, false, user?.role_name === "admin");
+      await ApiService.exportToExcel(exportData);
+    } catch (error) {
+      console.error("Ошибка при экспорте:", error);
+      alert("Ошибка при экспорте в Excel");
+    }
+  };
+
+  // Функция для отправки на email с актуальными портами (для всех пользователей)
+  const handleSendToEmail = async () => {
+    if (!email || !email.includes("@")) {
+      setEmailMessage({ text: "Введите корректный email адрес", type: "error" });
+      return;
+    }
+    try {
+      setEmailSending(true);
+      setEmailMessage({ text: "", type: "success" });
+      const exportData = generateExportData(connectionPoints, true, true);
+      await ApiService.sendExcelToEmail(exportData, email, user?.id, "section_filling");
+      setEmailMessage({ text: `Файл успешно отправлен на ${email}`, type: "success" });
+    } catch (error) {
+      console.error("Ошибка при отправке:", error);
+      setEmailMessage({ text: "Ошибка при отправке на email", type: "error" });
+    } finally {
+      setEmailSending(false);
+    }
+  };
 
   // Состояние загрузки
   if (loading) {
@@ -114,6 +215,9 @@ const Connection = ({
             index={index}
             connection={connection}
             consumerName={consumerData[index]?.consumerName}
+            deviceModel={deviceData[index]?.typeDevice}
+            deviceRequests={deviceData[index]?.requests}
+            deviceAdvSettings={deviceData[index]?.advSettings}
             pointsCount={pointsCount}
             ipAddresses={ipAddresses}
             protocols={protocols}
@@ -131,17 +235,20 @@ const Connection = ({
       {/* Кнопки действий */}
       <ConnectionActions
         onBack={onBack}
-        onExport={() => handleExportToExcel(exportDataWithoutPort)}
-        onSendEmail={openDialog}
+        onExport={handleExport}
+        onSendEmail={() => setEmailDialog(true)}
         allFilled={allFilled()}
       />
 
       {/* Диалог отправки на email */}
       <EmailSenderDialog
         open={emailDialog}
-        onClose={closeDialog}
+        onClose={() => setEmailDialog(false)}
         email={email}
-        onEmailChange={handleEmailChange}
+        onEmailChange={(value) => {
+          setEmail(value);
+          setEmailMessage({ text: "", type: "success" });
+        }}
         onSend={handleSendToEmail}
         sending={emailSending}
         message={emailMessage}

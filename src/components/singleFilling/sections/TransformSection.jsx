@@ -1,6 +1,8 @@
 import React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 
 const TransformSection = ({ formData, handleFieldChange }) => {
@@ -9,98 +11,117 @@ const TransformSection = ({ formData, handleFieldChange }) => {
       <Typography variant="h5" sx={{ mb: 3, color: "primary.main", fontWeight: "bold" }}>
         Трансформаторы тока и напряжения
       </Typography>
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-        <Box>
-          <Typography variant="subtitle1" sx={{ mb: 2, color: "orange", fontWeight: "bold" }}>
-            Трансформатор тока (ТТ)
+      <FormControlLabel
+        control={
+          <Switch
+            checked={formData.showTransform}
+            onChange={(e) => handleFieldChange("showTransform", e.target.checked)}
+            color="primary"
+          />
+        }
+        label={
+          <Typography variant="body1" sx={{ fontWeight: "bold" }}>
+            Есть
           </Typography>
-          <Box sx={{ display: "grid", gap: 2 }}>
-            <EnSelect
-              label="Тип ТТ"
-              value={formData.ttType}
-              onChange={(e) => handleFieldChange("ttType", e.target.value)}
-              freeInput
-            />
-            <EnSelect
-              label="Коэффициент трансформации ТТ"
-              value={formData.ttCoeff}
-              onChange={(e) => handleFieldChange("ttCoeff", e.target.value)}
-              helperText="Обязательное поле"
-              freeInput
-              required
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: formData.ttCoeff ? "success.main" : "error.main",
-                    borderWidth: "3px",
-                  },
-                },
-              }}
-            />
-            {["A", "B", "C"].map((phase) => (
-              <Box key={phase} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+        }
+        sx={{ gridColumn: "1 / -1", mb: 2 }}
+      />
+      {formData.showTransform && (
+        <>
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, color: "orange", fontWeight: "bold" }}>
+                Трансформатор тока (ТТ)
+              </Typography>
+              <Box sx={{ display: "grid", gap: 2 }}>
                 <EnSelect
-                  label={`Заводской номер ТТ "${phase}"`}
-                  value={formData[`ttSerial${phase}`]}
-                  onChange={(e) => handleFieldChange(`ttSerial${phase}`, e.target.value)}
+                  label="Тип ТТ"
+                  value={formData.ttType}
+                  onChange={(e) => handleFieldChange("ttType", e.target.value)}
                   freeInput
                 />
                 <EnSelect
-                  label={`№ пломбы ТТ "${phase}"`}
-                  value={formData[`ttSeal${phase}`]}
-                  onChange={(e) => handleFieldChange(`ttSeal${phase}`, e.target.value)}
+                  label="Коэффициент трансформации ТТ"
+                  value={formData.ttCoeff}
+                  onChange={(e) => handleFieldChange("ttCoeff", e.target.value)}
+                  helperText="Обязательное поле"
                   freeInput
+                  required
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: formData.ttCoeff ? "success.main" : "error.main",
+                        borderWidth: "3px",
+                      },
+                    },
+                  }}
                 />
+                {["A", "B", "C"].map((phase) => (
+                  <Box key={phase} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+                    <EnSelect
+                      label={`Заводской номер ТТ "${phase}"`}
+                      value={formData[`ttSerial${phase}`]}
+                      onChange={(e) => handleFieldChange(`ttSerial${phase}`, e.target.value)}
+                      freeInput
+                    />
+                    <EnSelect
+                      label={`№ пломбы ТТ "${phase}"`}
+                      value={formData[`ttSeal${phase}`]}
+                      onChange={(e) => handleFieldChange(`ttSeal${phase}`, e.target.value)}
+                      freeInput
+                    />
+                  </Box>
+                ))}
               </Box>
-            ))}
-          </Box>
-        </Box>
-        <Box>
-          <Typography variant="subtitle1" sx={{ mb: 2, color: "secondary.main", fontWeight: "bold" }}>
-            Трансформатор напряжения (ТН)
-          </Typography>
-          <Box sx={{ display: "grid", gap: 2 }}>
-            <EnSelect
-              label="Тип ТН"
-              value={formData.tnType}
-              onChange={(e) => handleFieldChange("tnType", e.target.value)}
-              freeInput
-            />
-            <EnSelect
-              label="Коэффициент трансформации ТН"
-              value={formData.tnCoeff}
-              onChange={(e) => handleFieldChange("tnCoeff", e.target.value)}
-              helperText="Обязательное поле"
-              freeInput
-              required
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: formData.tnCoeff ? "success.main" : "error.main",
-                    borderWidth: "3px",
-                  },
-                },
-              }}
-            />
-            {["A", "B", "C"].map((phase) => (
-              <Box key={phase} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, color: "secondary.main", fontWeight: "bold" }}>
+                Трансформатор напряжения (ТН)
+              </Typography>
+              <Box sx={{ display: "grid", gap: 2 }}>
                 <EnSelect
-                  label={`Заводской номер ТН "${phase}"`}
-                  value={formData[`tnSerial${phase}`]}
-                  onChange={(e) => handleFieldChange(`tnSerial${phase}`, e.target.value)}
+                  label="Тип ТН"
+                  value={formData.tnType}
+                  onChange={(e) => handleFieldChange("tnType", e.target.value)}
                   freeInput
                 />
                 <EnSelect
-                  label={`№ пломбы ТН "${phase}"`}
-                  value={formData[`tnSeal${phase}`]}
-                  onChange={(e) => handleFieldChange(`tnSeal${phase}`, e.target.value)}
+                  label="Коэффициент трансформации ТН"
+                  value={formData.tnCoeff}
+                  onChange={(e) => handleFieldChange("tnCoeff", e.target.value)}
+                  helperText="Обязательное поле"
                   freeInput
+                  required
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: formData.tnCoeff ? "success.main" : "error.main",
+                        borderWidth: "3px",
+                      },
+                    },
+                  }}
                 />
+                {["A", "B", "C"].map((phase) => (
+                  <Box key={phase} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+                    <EnSelect
+                      label={`Заводской номер ТН "${phase}"`}
+                      value={formData[`tnSerial${phase}`]}
+                      onChange={(e) => handleFieldChange(`tnSerial${phase}`, e.target.value)}
+                      freeInput
+                    />
+                    <EnSelect
+                      label={`№ пломбы ТН "${phase}"`}
+                      value={formData[`tnSeal${phase}`]}
+                      onChange={(e) => handleFieldChange(`tnSeal${phase}`, e.target.value)}
+                      freeInput
+                    />
+                  </Box>
+                ))}
               </Box>
-            ))}
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        </>
+      )}
     </Box>
   );
 };

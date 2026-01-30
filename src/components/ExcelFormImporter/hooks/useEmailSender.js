@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import ApiService from "../../../services/api";
+import { useAuth } from "../../../context/AuthContext";
 
 /**
  * Хук для управления отправкой email.
  */
 const useEmailSender = (rows, validateAllWithOverrides, processData) => {
+  const { user } = useAuth();
   const [emailDialog, setEmailDialog] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSending, setEmailSending] = useState(false);
@@ -43,7 +45,7 @@ const useEmailSender = (rows, validateAllWithOverrides, processData) => {
       setEmailSending(true);
       const processedData = await processData(rows);
       setEmailMessage({ text: "", type: "success" });
-      await ApiService.sendExcelToEmail(processedData, email);
+      await ApiService.sendExcelToEmail(processedData, email, user?.id, "excel_import");
       setEmailMessage({ text: `Файл успешно отправлен на ${email}`, type: "success" });
     } catch (error) {
       console.error("Ошибка при отправке на email:", error);

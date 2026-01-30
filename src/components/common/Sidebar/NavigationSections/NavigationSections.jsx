@@ -13,14 +13,16 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DescriptionIcon from "@mui/icons-material/Description";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import { useAuth } from "../../../../context/AuthContext";
 
 export default function NavigationSections({ showAsSidebar = false }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [targetRoute, setTargetRoute] = useState("");
 
-  const sections = [
+  const allSections = [
     {
       title: "Заполнение по разделам",
       subtitle: "Множественное заполнение по шагам",
@@ -28,6 +30,7 @@ export default function NavigationSections({ showAsSidebar = false }) {
       icon: <AccountTreeIcon sx={{ fontSize: 40 }} />,
       route: "/SectionFilling",
       color: "#2196f3",
+      adminOnly: false,
     },
     {
       title: "Заполнение единой карточки",
@@ -36,6 +39,7 @@ export default function NavigationSections({ showAsSidebar = false }) {
       icon: <DescriptionIcon sx={{ fontSize: 40 }} />,
       route: "/SingleFilling",
       color: "#ff9800",
+      adminOnly: false,
     },
     {
       title: "Импорт Excel файла",
@@ -44,6 +48,7 @@ export default function NavigationSections({ showAsSidebar = false }) {
       icon: <UploadFileIcon sx={{ fontSize: 40 }} />,
       route: "/ImportExcel",
       color: "#4caf50",
+      adminOnly: false,
     },
     {
       title: "Панель Администратора",
@@ -52,8 +57,12 @@ export default function NavigationSections({ showAsSidebar = false }) {
       icon: <AdminPanelSettingsIcon sx={{ fontSize: 40 }} />,
       route: "/AdminPanel",
       color: "#9c27b0",
+      adminOnly: true, // Только для админа
     },
   ];
+
+  // Фильтруем разделы по ролям
+  const sections = allSections.filter((section) => !section.adminOnly || isAdmin());
 
   const handleCardClick = (route) => {
     // Проверяем, есть ли несохраненные данные

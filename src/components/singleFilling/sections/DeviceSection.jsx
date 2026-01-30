@@ -3,8 +3,11 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import { validators } from "../../../utils/Validation/Validation";
+import { useAuth } from "../../../context/AuthContext";
 
 const DeviceSection = ({ formData, handleFieldChange, deviceTypes, validationErrors }) => {
+  const { isAdmin } = useAuth();
+  const showRestrictedFields = isAdmin(); // Показывать скрытые поля только админам
   return (
     <Box sx={{ mb: 4, p: 3, border: 1, borderColor: "grey.300", borderRadius: 2 }}>
       <Typography variant="h5" sx={{ mb: 3, color: "primary.main", fontWeight: "bold" }}>
@@ -86,22 +89,24 @@ const DeviceSection = ({ formData, handleFieldChange, deviceTypes, validationErr
           onChange={(e) => handleFieldChange("numberCasing", e.target.value)}
           freeInput
         />
-        <EnSelect
-          label="Пароль на конфигурирование"
-          value={formData.password}
-          onChange={(e) => handleFieldChange("password", e.target.value)}
-          helperText="Обязательное поле"
-          freeInput
-          required
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              "& fieldset": {
-                borderColor: formData.password ? "success.main" : "error.main",
-                borderWidth: "3px",
+        {showRestrictedFields && (
+          <EnSelect
+            label="Пароль на конфигурирование"
+            value={formData.password}
+            onChange={(e) => handleFieldChange("password", e.target.value)}
+            helperText="Обязательное поле"
+            freeInput
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.password ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
               },
-            },
-          }}
-        />
+            }}
+          />
+        )}
         <EnSelect
           label="Примечание"
           value={formData.note}

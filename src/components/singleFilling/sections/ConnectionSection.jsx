@@ -6,6 +6,8 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import { validators } from "../../../utils/Validation/Validation";
+import { useAuth } from "../../../context/AuthContext";
+import { isRimModelRequiringCommunicator } from "../../../utils/Validation/validationRules";
 
 const ConnectionSection = ({
   formData,
@@ -16,6 +18,10 @@ const ConnectionSection = ({
   validationErrors = {},
   errorMessages = {},
 }) => {
+  const { isAdmin } = useAuth();
+  const showRestrictedFields = isAdmin(); // Показывать скрытые поля только админам
+  const isRimModel = isRimModelRequiringCommunicator(formData.typeDevice);
+
   return (
     <Box sx={{ mb: 4, p: 3, border: 1, borderColor: "grey.300", borderRadius: 2 }}>
       <Typography variant="h5" sx={{ mb: 3, color: "primary.main", fontWeight: "bold" }}>
@@ -37,53 +43,59 @@ const ConnectionSection = ({
           }
           sx={{ gridColumn: "1 / -1", mb: 2 }}
         />
-        <EnSelect
-          label="IP адрес"
-          options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
-          value={formData.ipAddress}
-          onChange={(e) => handleFieldChange("ipAddress", e.target.value)}
-          helperText="Обязательное поле"
-          required
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              "& fieldset": {
-                borderColor: formData.ipAddress ? "success.main" : "error.main",
-                borderWidth: "3px",
+        {showRestrictedFields && (
+          <EnSelect
+            label="IP адрес"
+            options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
+            value={formData.ipAddress}
+            onChange={(e) => handleFieldChange("ipAddress", e.target.value)}
+            helperText="Обязательное поле"
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.ipAddress ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
               },
-            },
-          }}
-        />
-        <EnSelect
-          label="Порт"
-          value={formData.port}
-          onChange={(e) => handleFieldChange("port", e.target.value)}
-          helperText="Автозаполнение при отправке на почту или введите нужное"
-          freeInput
-          required
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              "& fieldset": {
-                borderColor: "success.main",
-                borderWidth: "3px",
+            }}
+          />
+        )}
+        {showRestrictedFields && (
+          <EnSelect
+            label="Порт"
+            value={formData.port}
+            onChange={(e) => handleFieldChange("port", e.target.value)}
+            helperText="Введите нужный порт"
+            freeInput
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: "success.main",
+                  borderWidth: "3px",
+                },
               },
-            },
-          }}
-        />
-        <EnSelect
-          label="Сетевой адрес"
-          value={getNetworkAddress() || formData.networkAddress}
-          onChange={(e) => handleFieldChange("networkAddress", e.target.value)}
-          freeInput
-          disabled
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              "& fieldset": {
-                borderColor: formData.protocol ? "success.main" : "error.main",
-                borderWidth: "3px",
+            }}
+          />
+        )}
+        {showRestrictedFields && (
+          <EnSelect
+            label="Сетевой адрес"
+            value={getNetworkAddress() || formData.networkAddress}
+            onChange={(e) => handleFieldChange("networkAddress", e.target.value)}
+            freeInput
+            disabled
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.protocol ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
               },
-            },
-          }}
-        />
+            }}
+          />
+        )}
         <EnSelect
           label="Номер сим карты (короткий)"
           value={formData.simCardShort}
@@ -118,29 +130,64 @@ const ConnectionSection = ({
             },
           }}
         />
-        <EnSelect
-          label="Протокол"
-          options={Array.isArray(protocols) ? protocols.map((p) => p.name) : []}
-          value={formData.protocol}
-          onChange={(e) => handleFieldChange("protocol", e.target.value)}
+        <TextField
+          label="Коэффициент итоговый (не редактируемый)"
+          value={formData.finalCoeff}
+          InputProps={{ readOnly: true }}
           helperText="Обязательное поле"
-          required
           sx={{
             "& .MuiOutlinedInput-root": {
               "& fieldset": {
-                borderColor: formData.protocol ? "success.main" : "error.main",
+                borderColor: formData.finalCoeff ? "success.main" : "error.main",
                 borderWidth: "3px",
               },
             },
           }}
         />
+        {showRestrictedFields && (
+          <EnSelect
+            label="Протокол"
+            options={Array.isArray(protocols) ? protocols.map((p) => p.name) : []}
+            value={formData.protocol}
+            onChange={(e) => handleFieldChange("protocol", e.target.value)}
+            helperText="Обязательное поле"
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.protocol ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
+              },
+            }}
+          />
+        )}
         <EnSelect
-          label="Номер коммуникатора (для РиМ)"
+          label={isRimModel ? "Номер коммуникатора (для РиМ) *" : "Номер коммуникатора (для РиМ)"}
           value={formData.communicatorNumber}
           onChange={(e) => handleFieldChange("communicatorNumber", e.target.value)}
           freeInput
-          error={validationErrors.communicatorNumber}
-          helperText={validationErrors.communicatorNumber ? validators.communicatorNumber.message : ""}
+          error={validationErrors.communicatorNumber || (isRimModel && !formData.communicatorNumber)}
+          helperText={
+            validationErrors.communicatorNumber
+              ? validators.communicatorNumber.message
+              : isRimModel
+                ? "Обязательное поле для счетчиков РиМ"
+                : ""
+          }
+          required={isRimModel}
+          sx={
+            isRimModel
+              ? {
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      borderColor: formData.communicatorNumber ? "success.main" : "error.main",
+                      borderWidth: "3px",
+                    },
+                  },
+                }
+              : {}
+          }
         />
         <EnSelect
           label="Номера ком портов"
@@ -149,24 +196,48 @@ const ConnectionSection = ({
           freeInput
           helperText="Через запятую: 3,4,5"
         />
-        <EnSelect
-          label="Дополнительные параметры"
-          value={formData.advSettings}
-          onChange={(e) => handleFieldChange("advSettings", e.target.value)}
-          freeInput
-        />
+        {showRestrictedFields && (
+          <EnSelect
+            label="Дополнительные параметры"
+            value={formData.advSettings}
+            onChange={(e) => handleFieldChange("advSettings", e.target.value)}
+            freeInput
+            helperText="Обязательное поле"
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.advSettings ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
+              },
+            }}
+          />
+        )}
         <EnSelect
           label="Наименование соединения"
           value={formData.nameConnection}
           onChange={(e) => handleFieldChange("nameConnection", e.target.value)}
           freeInput
         />
-        <EnSelect
-          label="Запросы"
-          value={formData.requests}
-          onChange={(e) => handleFieldChange("requests", e.target.value)}
-          freeInput
-        />
+        {showRestrictedFields && (
+          <EnSelect
+            label="Запросы"
+            value={formData.requests}
+            onChange={(e) => handleFieldChange("requests", e.target.value)}
+            freeInput
+            helperText="Обязательное поле"
+            required
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: formData.requests ? "success.main" : "error.main",
+                  borderWidth: "3px",
+                },
+              },
+            }}
+          />
+        )}
         {formData.showUSPD && (
           <>
             <EnSelect

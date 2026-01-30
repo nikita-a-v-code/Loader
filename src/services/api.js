@@ -110,6 +110,23 @@ class ApiService {
     return this.delete(`statuses/${id}`);
   }
 
+  /* Методы для трансформаторынх подстанций */
+  static async getNumberTP() {
+    return this.get("numberTP");
+  }
+
+  static async createNumberTP(data) {
+    return this.post("numberTP", data);
+  }
+
+  static async updateNumberTP(id, data) {
+    return this.put(`numberTP/${id}`, data);
+  }
+
+  static async deleteNumberTP(id) {
+    return this.delete(`numberTP/${id}`);
+  }
+
   /* Методы для организационной структуры */
   /* Методы для МПЭС */
   static async getMpes() {
@@ -305,8 +322,8 @@ class ApiService {
   }
 
   /* Метод для отправки Excel на email */
-  static async sendExcelToEmail(data, email) {
-    return this.post("excel/send-email", { data, email });
+  static async sendExcelToEmail(data, email, userId = null, formType = "loader") {
+    return this.post("excel/send-email", { data, email, userId, formType });
   }
 
   /* Настройки */
@@ -385,6 +402,24 @@ class ApiService {
   // Получить текущего пользователя по токену
   static async getCurrentUser() {
     return this.get("users/me");
+  }
+
+  /* Методы для журнала действий */
+  static async getActionLogs(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`action-logs${queryString ? `?${queryString}` : ""}`);
+  }
+
+  static async getActionTypes() {
+    return this.get("action-logs/actions");
+  }
+
+  static async getEntityTypes() {
+    return this.get("action-logs/entity-types");
+  }
+
+  static async createActionLog(data) {
+    return this.post("action-logs", data);
   }
 }
 

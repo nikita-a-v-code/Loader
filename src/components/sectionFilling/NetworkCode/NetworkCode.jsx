@@ -3,9 +3,12 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../ui/Buttons/CopyButtons";
+import AddNewElement from "../../../ui/Buttons/AddNewElement";
+import ApiService from "../../../services/api";
 import { Manual, SubstationCode } from "../../../data/dataBase";
 import { validators, useValidationErrors, validateField } from "../../../utils/Validation/Validation";
 import { formatNetworkCode, validateNetworkCode, validateDigitsOnly } from "../../../utils/networkCodeValidation";
+import { useAuth } from "../../../context/AuthContext";
 
 const NetworkCode = ({
   onNext,
@@ -16,8 +19,11 @@ const NetworkCode = ({
   pointsCount = 1,
   consumerData = {},
 }) => {
+  const { user } = useAuth();
   const { errors: validationErrors, showError, clearError } = useValidationErrors();
   const [errorMessages, setErrorMessages] = React.useState({});
+  const [numberTP, setNumberTP] = React.useState([]);
+  const [loadingTP, setLoadingTP] = React.useState(false);
   const [networkPoints, setNetworkPoints] = React.useState(() => {
     const code = [];
     for (let i = 0; i < pointsCount; i++) {
@@ -38,6 +44,42 @@ const NetworkCode = ({
 
   // Проверка заполненности всех обязательных полей (номер ТП)
   const allFilled = networkPoints.every((point) => point.transformerSubstationNumber);
+
+  // Загрузка списка номеров ТП
+  React.useEffect(() => {
+    const loadNumberTP = async () => {
+      try {
+        setLoadingTP(true);
+        const response = await ApiService.getNumberTP();
+        setNumberTP(response || []);
+      } catch (error) {
+        console.error("Ошибка загрузки номеров ТП:", error);
+        setNumberTP([]);
+      } finally {
+        setLoadingTP(false);
+      }
+    };
+    loadNumberTP();
+  }, []);
+
+  // Функция создания нового номера ТП
+  const createNumberTp = async (name) => {
+    try {
+      const newTP = await ApiService.createNumberTP({ 
+        name, 
+        userId: user?.id,
+        source: "section_filling"
+      });
+      setNumberTP((prev) => [...prev, newTP]);
+      return newTP;
+    } catch (error) {
+      console.error("Ошибка создания номера ТП:", error);
+      throw error;
+    }
+  };
+
+  // Опции для выпадающего списка номеров ТП
+  const numberTPOptions = numberTP.map((item) => item.name);
 
   // Обработчик изменения значения поля для конкретной точки потребителя
   const handleFieldChange = (pointIndex, fieldName, value) => {
@@ -65,8 +107,16 @@ const NetworkCode = ({
       return;
     }
 
-    if (fieldName === "maxPower" || fieldName === "transformerSubstationNumber") {
+    if (fieldName === "maxPower") {
       if (!validateDigitsOnly(value)) {
+        showError(errorKey);
+        return;
+      }
+      clearError(errorKey);
+    }
+
+    if (fieldName === "transformerSubstationNumber") {
+      if (!value || value.trim() === "") {
         showError(errorKey);
         return;
       }
@@ -195,16 +245,19 @@ const NetworkCode = ({
                     label="Номер трансформаторной подстанции"
                     value={code.transformerSubstationNumber}
                     onChange={(e) => handleFieldChange(index, "transformerSubstationNumber", e.target.value)}
-                    freeInput={true}
+                    options={numberTPOptions}
                     required={true}
+                    searchable
                     size="small"
                     error={validationErrors[`transformerSubstationNumber-${index}`]}
                     helperText={
-                      validationErrors[`transformerSubstationNumber-${index}`] ? "Только цифры" : "Обязательное поле"
+                      validationErrors[`transformerSubstationNumber-${index}`]
+                        ? "Выберите номер ТП"
+                        : "Обязательное поле"
                     }
                     sx={{ minWidth: 210, marginTop: 2 }}
                   />
-                  <Box sx={{ marginTop: 10 }}>
+                  <Box sx={{ marginTop: 2, display: "flex", flexDirection: "column", gap: 1 }}>
                     <CopyButtons
                       pointsCount={pointsCount}
                       index={index}
@@ -213,6 +266,14 @@ const NetworkCode = ({
                       onApplyToNext={() => applyToNext(index, "transformerSubstationNumber")}
                       totalPoints={networkPoints.length}
                       arrowDirection="right"
+                    />
+                    <AddNewElement
+                      onAdd={createNumberTp}
+                      title="Добавить трансформаторную подстанцию"
+                      label="Название трансформаторной подстанции"
+                      placeholder="например: ТП-1"
+                      validateTPNumber={true}
+                      existingItems={numberTP}
                     />
                   </Box>
                 </Box>

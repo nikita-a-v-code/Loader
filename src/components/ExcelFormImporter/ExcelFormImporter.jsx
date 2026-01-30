@@ -6,6 +6,7 @@ import useEmailSender from "./hooks/useEmailSender";
 import ErrorCard from "./components/ErrorCard";
 import EmailSenderDialog from "../../ui/EmailSenderDialog";
 import { parseExcelFile } from "./utils/excelParser";
+import { useAuth } from "../../context/AuthContext";
 import {
   NETWORK_CODE_FIELDS,
   SIM_CARD_FIELDS,
@@ -35,10 +36,11 @@ const ExcelFormImporter = () => {
     setTouchedFields,
     loadStreetsForSettlement, // Загрузка улиц для населенного пункта
     autofillPasswords, // Автозаполнение паролей для счетчиков
+    autofillDeviceSettings, // Автозаполнение Запросов и Дополнительных параметров счетчика
     autofillIpAddresses, // Автозаполнение IP адресов
     calculateNetworkAddresses, // Расчет сетевых адресов
     autofillProtocols, // Автозаполнение протоколов
-    assignPortsToRows, // Назначение портов строкам
+    autofillTransformerCoefficients, // Автозаполнение коэффициентов ТТ и ТН
     validateAll, // Полная валидация всех данных
     getOptionsForField, // Получение опций для полей-справочников
   } = useExcelData();
@@ -177,20 +179,6 @@ const ExcelFormImporter = () => {
           if (copy[ri] && Object.keys(copy[ri]).length === 0) delete copy[ri];
           return copy;
         });
-      } else if (field === "Номер трансформаторной подстанции") {
-        // Валидация поля трансформатора
-        const tErr = getTransformerFieldErrors(updatedRow);
-        setErrors((prev) => {
-          const copy = { ...prev };
-          if (tErr[field]) {
-            if (!copy[ri]) copy[ri] = {};
-            copy[ri][field] = tErr[field];
-          } else if (copy[ri]) {
-            delete copy[ri][field];
-            if (Object.keys(copy[ri]).length === 0) delete copy[ri];
-          }
-          return copy;
-        });
       } else {
         // Валидация остальных полей с простыми regex правилами
         const fieldError = validateSimpleField(field, value);
@@ -220,6 +208,9 @@ const ExcelFormImporter = () => {
    * Обработчик экспорта данных в Excel.
    * Проверяет валидность перед экспортом.
    */
+  const { user } = useAuth();
+  const isAdmin = user?.role_name === "admin";
+
   const handleExport = useCallback(async () => {
     const validation = await validateAllWithOverrides();
     if (Object.keys(validation).length > 0) {
@@ -227,12 +218,30 @@ const ExcelFormImporter = () => {
       return;
     }
     try {
-      await ApiService.exportToExcel(rows);
+      // Применяем автозаполнение коэффициентов перед экспортом
+      let processedRows = autofillTransformerCoefficients(rows);
+      
+      // Скрываем поля для не-админов
+      if (!isAdmin) {
+        processedRows = processedRows.map((row) => {
+          const filteredRow = { ...row };
+          delete filteredRow["Сетевой адрес"];
+          delete filteredRow["IP адрес"];
+          delete filteredRow["Пароль на конфигурирование"];
+          delete filteredRow["Протокол"];
+          delete filteredRow["Порт"];
+          delete filteredRow["Запросы"];
+          delete filteredRow["Дополнительные параметры счетчика"];
+          return filteredRow;
+        });
+      }
+      
+      await ApiService.exportToExcel(processedRows);
     } catch (err) {
       console.error("Export error:", err);
       alert("Ошибка при экспорте: " + err.message);
     }
-  }, [rows, validateAllWithOverrides]);
+  }, [rows, validateAllWithOverrides, autofillTransformerCoefficients, isAdmin]);
 
   /**
    * Подготовка данных для отправки на email.
@@ -243,12 +252,13 @@ const ExcelFormImporter = () => {
     async (data) => {
       let processed = calculateNetworkAddresses(data); // Расчет сетевых адресов
       processed = autofillPasswords(processed); // Пароли для счетчиков
+      processed = autofillDeviceSettings(processed); // Запросы и Дополнительные параметры счетчика
       processed = autofillIpAddresses(processed); // IP адреса
       processed = autofillProtocols(processed); // Автозаполнение протоколов
-      processed = await assignPortsToRows(processed); // Назначение портов
+      processed = autofillTransformerCoefficients(processed); // Автозаполнение коэффициентов ТТ и ТН
       return processed;
     },
-    [calculateNetworkAddresses, autofillPasswords, autofillIpAddresses, autofillProtocols, assignPortsToRows]
+    [calculateNetworkAddresses, autofillPasswords, autofillDeviceSettings, autofillIpAddresses, autofillProtocols, autofillTransformerCoefficients]
   );
 
   // === Хук для управления отправкой на email ===

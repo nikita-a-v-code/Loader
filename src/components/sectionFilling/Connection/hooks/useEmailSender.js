@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import ApiService from "../../../../services/api";
+import { useAuth } from "../../../../context/AuthContext";
 
 /**
  * Хук для управления отправкой на email
  */
 const useEmailSender = ({ exportDataWithPort, assignPortsToConnections, portsAssigned }) => {
+  const { user } = useAuth();
   const [emailDialog, setEmailDialog] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSending, setEmailSending] = useState(false);
@@ -60,11 +62,9 @@ const useEmailSender = ({ exportDataWithPort, assignPortsToConnections, portsAss
 
     try {
       setEmailSending(true);
-      if (!portsAssigned) {
-        await assignPortsToConnections();
-      }
+      await assignPortsToConnections();
       setEmailMessage({ text: "", type: "success" });
-      await ApiService.sendExcelToEmail(exportDataWithPort, email);
+      await ApiService.sendExcelToEmail(exportDataWithPort, email, user?.id, "section_filling");
       setEmailMessage({ text: `Файл успешно отправлен на ${email}`, type: "success" });
     } catch (error) {
       console.error("Ошибка при отправке на email:", error);
@@ -72,7 +72,7 @@ const useEmailSender = ({ exportDataWithPort, assignPortsToConnections, portsAss
     } finally {
       setEmailSending(false);
     }
-  }, [email, exportDataWithPort, assignPortsToConnections, portsAssigned]);
+  }, [email, exportDataWithPort, assignPortsToConnections]);
 
   /**
    * Экспорт в Excel

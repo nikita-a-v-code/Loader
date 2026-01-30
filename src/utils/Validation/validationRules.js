@@ -201,6 +201,25 @@ export const NETWORK_CODE_FIELD_RULES = {
 // === Поля SIM-карты ===
 export const SIM_CARD_FIELDS = ["Номер сим карты (короткий)", "Номер сим карты (полный)"];
 
+// === Модели счетчиков РиМ, требующие номер коммуникатора ===
+export const RIM_MODELS_REQUIRING_COMMUNICATOR = [
+  "РиМ 189.26",
+  "РиМ 289.24",
+  "РиМ 489.24",
+  "РиМ 489.26",
+  "РиМ 489.30",
+];
+
+/**
+ * Проверяет, требует ли модель счетчика обязательного номера коммуникатора
+ * @param {string} deviceModel - Модель счетчика
+ * @returns {boolean} - true, если номер коммуникатора обязателен
+ */
+export const isRimModelRequiringCommunicator = (deviceModel) => {
+  if (!deviceModel) return false;
+  return RIM_MODELS_REQUIRING_COMMUNICATOR.includes(deviceModel);
+};
+
 // === Вспомогательные функции ===
 
 /**

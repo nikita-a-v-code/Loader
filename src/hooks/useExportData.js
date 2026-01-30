@@ -12,6 +12,7 @@ export const useExportData = ({
   calculateNetworkAddress,
   calculateFinalCoeff,
   includePort = false,
+  isAdminExport = false,
 }) => {
   const exportData = useMemo(
     () => {
@@ -94,7 +95,7 @@ export const useExportData = ({
           simCardFull: connectionData[i]?.simCardFull || "",
           simCardShort: connectionData[i]?.simCardShort || "",
           ipAddress: connectionData[i]?.ipAddress || "",
-          ...(includePort ? { port: connectionData[i]?.port || "" } : {}),
+          ...(includePort || isAdminExport ? { port: connectionData[i]?.port || "" } : {}),
           communicatorNumber: connectionData[i]?.communicatorNumber || "",
           protocol: connectionData[i]?.protocol || "",
           finalCoeff: calculateFinalCoeff(i) || "",
@@ -108,6 +109,15 @@ export const useExportData = ({
           userUSPD: connectionData[i]?.userUSPD || "",
           passwordUSPD: connectionData[i]?.passwordUSPD || "",
         };
+
+        // Удаляем поля для не-админов
+        if (!isAdminExport) {
+          delete point.networkAddress;
+          delete point.ipAddress;
+          delete point.password;
+          delete point.protocol;
+          delete point.port;
+        }
 
         data.push(point);
       }
@@ -127,6 +137,7 @@ export const useExportData = ({
       calculateNetworkAddress,
       calculateFinalCoeff,
       includePort,
+      isAdminExport,
     ]
   );
 

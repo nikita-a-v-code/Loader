@@ -7,6 +7,8 @@ import Typography from "@mui/material/Typography";
 import EnSelect from "../../../../ui/EnSelect/EnSelect";
 import CopyButtons from "../../../../ui/Buttons/CopyButtons";
 import USPDFields from "./USPDFields";
+import { useAuth } from "../../../../context/AuthContext";
+import { isRimModelRequiringCommunicator } from "../../../../utils/Validation/validationRules";
 
 /**
  * Карточка точки подключения
@@ -15,6 +17,9 @@ const ConnectionPointCard = ({
   index,
   connection,
   consumerName,
+  deviceModel,
+  deviceRequests,
+  deviceAdvSettings,
   pointsCount,
   ipAddresses,
   protocols,
@@ -26,6 +31,10 @@ const ConnectionPointCard = ({
   onApplyToAll,
   onApplyToNext,
 }) => {
+  const { isAdmin } = useAuth();
+  const showRestrictedFields = isAdmin(); // Показывать скрытые поля только админам
+  const isRimModel = isRimModelRequiringCommunicator(deviceModel);
+
   return (
     <Box sx={{ mb: 2, border: "2px solid black", borderRadius: 2, p: 2 }}>
       {/* Заголовок */}
@@ -63,60 +72,66 @@ const ConnectionPointCard = ({
           sx={{ mb: 1 }}
         />
 
-        {/* IP адрес */}
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-          <EnSelect
-            id={`ipAddress-${index}`}
-            label="IP адрес"
-            options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
-            value={connection.ipAddress}
-            onChange={(e) => onFieldChange(index, "ipAddress", e.target.value)}
-            required={true}
-            helperText="Обязательное поле"
-            size="small"
-            sx={{ width: 210 }}
-          />
-          <CopyButtons
-            pointsCount={pointsCount}
-            index={index}
-            fieldValue={connection.ipAddress}
-            onApplyToAll={() => onApplyToAll(index, "ipAddress")}
-            onApplyToNext={() => onApplyToNext(index, "ipAddress")}
-            totalPoints={pointsCount}
-            arrowDirection="right"
-          />
-        </Box>
+        {/* IP адрес - только для админа */}
+        {showRestrictedFields && (
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+            <EnSelect
+              id={`ipAddress-${index}`}
+              label="IP адрес"
+              options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
+              value={connection.ipAddress}
+              onChange={(e) => onFieldChange(index, "ipAddress", e.target.value)}
+              required={true}
+              helperText="Обязательное поле"
+              size="small"
+              sx={{ width: 210 }}
+            />
+            <CopyButtons
+              pointsCount={pointsCount}
+              index={index}
+              fieldValue={connection.ipAddress}
+              onApplyToAll={() => onApplyToAll(index, "ipAddress")}
+              onApplyToNext={() => onApplyToNext(index, "ipAddress")}
+              totalPoints={pointsCount}
+              arrowDirection="right"
+            />
+          </Box>
+        )}
 
-        {/* Порт */}
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-          <EnSelect
-            id={`port-${index}`}
-            label="Порт"
-            value={connection.port}
-            onChange={(e) => onFieldChange(index, "port", e.target.value)}
-            freeInput={true}
-            required={true}
-            error={validationErrors[`port-${index}`]}
-            helperText={validationErrors[`port-${index}`] ? "Только цифры" : "Обязательное поле"}
-            size="small"
-            sx={{ width: 210 }}
-          />
-        </Box>
+        {/* Порт - только для админа */}
+        {showRestrictedFields && (
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+            <EnSelect
+              id={`port-${index}`}
+              label="Порт"
+              value={connection.port}
+              onChange={(e) => onFieldChange(index, "port", e.target.value)}
+              freeInput={true}
+              required={true}
+              error={validationErrors[`port-${index}`]}
+              helperText={validationErrors[`port-${index}`] ? "Только цифры" : "Обязательное поле"}
+              size="small"
+              sx={{ width: 210 }}
+            />
+          </Box>
+        )}
 
-        {/* Сетевой адрес */}
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-          <EnSelect
-            id={`networkAddress-${index}`}
-            label="Сетевой адрес"
-            value={networkAddress || connection.networkAddress}
-            onChange={(e) => onFieldChange(index, "networkAddress", e.target.value)}
-            freeInput={true}
-            required={true}
-            helperText="Обязательное поле"
-            size="small"
-            sx={{ width: 210 }}
-          />
-        </Box>
+        {/* Сетевой адрес - только для админа */}
+        {showRestrictedFields && (
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+            <EnSelect
+              id={`networkAddress-${index}`}
+              label="Сетевой адрес"
+              value={networkAddress || connection.networkAddress}
+              onChange={(e) => onFieldChange(index, "networkAddress", e.target.value)}
+              freeInput={true}
+              required={true}
+              helperText="Обязательное поле"
+              size="small"
+              sx={{ width: 210 }}
+            />
+          </Box>
+        )}
 
         {/* Номер сим карты (короткий) */}
         <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
@@ -152,29 +167,31 @@ const ConnectionPointCard = ({
           />
         </Box>
 
-        {/* Протокол */}
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-          <EnSelect
-            id={`protocol-${index}`}
-            label="Протокол"
-            options={Array.isArray(protocols) ? protocols.map((p) => p.name) : []}
-            value={connection.protocol}
-            onChange={(e) => onFieldChange(index, "protocol", e.target.value)}
-            required={true}
-            helperText="Обязательное поле"
-            size="small"
-            sx={{ width: 210 }}
-          />
-          <CopyButtons
-            pointsCount={pointsCount}
-            index={index}
-            fieldValue={connection.protocol}
-            onApplyToAll={() => onApplyToAll(index, "protocol")}
-            onApplyToNext={() => onApplyToNext(index, "protocol")}
-            totalPoints={pointsCount}
-            arrowDirection="right"
-          />
-        </Box>
+        {/* Протокол - только для админа */}
+        {showRestrictedFields && (
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+            <EnSelect
+              id={`protocol-${index}`}
+              label="Протокол"
+              options={Array.isArray(protocols) ? protocols.map((p) => p.name) : []}
+              value={connection.protocol}
+              onChange={(e) => onFieldChange(index, "protocol", e.target.value)}
+              required={true}
+              helperText="Обязательное поле"
+              size="small"
+              sx={{ width: 210 }}
+            />
+            <CopyButtons
+              pointsCount={pointsCount}
+              index={index}
+              fieldValue={connection.protocol}
+              onApplyToAll={() => onApplyToAll(index, "protocol")}
+              onApplyToNext={() => onApplyToNext(index, "protocol")}
+              totalPoints={pointsCount}
+              arrowDirection="right"
+            />
+          </Box>
+        )}
 
         {/* Коэффициент итоговый */}
         <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
@@ -198,13 +215,17 @@ const ConnectionPointCard = ({
         <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, marginTop: 10 }}>
           <EnSelect
             id={`communicatorNumber-${index}`}
-            label="Номер коммуникатора (для счетчиков РиМ)"
+            label={isRimModel ? "Номер коммуникатора (для счетчиков РиМ) *" : "Номер коммуникатора (для счетчиков РиМ)"}
             value={connection.communicatorNumber}
             onChange={(e) => onFieldChange(index, "communicatorNumber", e.target.value)}
             freeInput={true}
-            error={validationErrors[`communicatorNumber-${index}`]}
+            error={validationErrors[`communicatorNumber-${index}`] || (isRimModel && !connection.communicatorNumber)}
             helperText={
-              validationErrors[`communicatorNumber-${index}`] ? "Только цифры" : "Обязательное поле (для РиМ)"
+              validationErrors[`communicatorNumber-${index}`]
+                ? "Только цифры"
+                : isRimModel
+                  ? "Обязательное поле для счетчиков РиМ"
+                  : ""
             }
             size="small"
             sx={{ width: 210 }}
@@ -235,26 +256,33 @@ const ConnectionPointCard = ({
         </Box>
 
         {/* Дополнительные параметры */}
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-          <EnSelect
-            id={`advSettings-${index}`}
-            label="Дополнительные параметры счетчика"
-            value={connection.advSettings}
-            onChange={(e) => onFieldChange(index, "advSettings", e.target.value)}
-            freeInput={true}
-            size="small"
-            sx={{ width: 360 }}
-          />
-          <CopyButtons
-            pointsCount={pointsCount}
-            index={index}
-            fieldValue={connection.advSettings}
-            onApplyToAll={() => onApplyToAll(index, "advSettings")}
-            onApplyToNext={() => onApplyToNext(index, "advSettings")}
-            totalPoints={pointsCount}
-            arrowDirection="right"
-          />
-        </Box>
+        {showRestrictedFields && (
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+            <EnSelect
+              id={`advSettings-${index}`}
+              label="Дополнительные параметры счетчика"
+              value={
+                connection.advSettingsEdited
+                  ? connection.advSettings
+                  : connection.advSettings || deviceAdvSettings || ""
+              }
+              onChange={(e) => onFieldChange(index, "advSettings", e.target.value)}
+              freeInput={true}
+              helperText="Обязательное поле"
+              size="small"
+              sx={{ width: 360 }}
+            />
+            <CopyButtons
+              pointsCount={pointsCount}
+              index={index}
+              fieldValue={connection.advSettings}
+              onApplyToAll={() => onApplyToAll(index, "advSettings")}
+              onApplyToNext={() => onApplyToNext(index, "advSettings")}
+              totalPoints={pointsCount}
+              arrowDirection="right"
+            />
+          </Box>
+        )}
 
         {/* Наименование соединения */}
         <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
@@ -279,26 +307,29 @@ const ConnectionPointCard = ({
         </Box>
 
         {/* Запросы */}
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-          <EnSelect
-            id={`requests-${index}`}
-            label="Запросы"
-            value={connection.requests}
-            onChange={(e) => onFieldChange(index, "requests", e.target.value)}
-            freeInput={true}
-            size="small"
-            sx={{ width: 360 }}
-          />
-          <CopyButtons
-            pointsCount={pointsCount}
-            index={index}
-            fieldValue={connection.requests}
-            onApplyToAll={() => onApplyToAll(index, "requests")}
-            onApplyToNext={() => onApplyToNext(index, "requests")}
-            totalPoints={pointsCount}
-            arrowDirection="right"
-          />
-        </Box>
+        {showRestrictedFields && (
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+            <EnSelect
+              id={`requests-${index}`}
+              label="Запросы"
+              value={connection.requestsEdited ? connection.requests : connection.requests || deviceRequests || ""}
+              onChange={(e) => onFieldChange(index, "requests", e.target.value)}
+              freeInput={true}
+              helperText="Обязательное поле"
+              size="small"
+              sx={{ width: 360 }}
+            />
+            <CopyButtons
+              pointsCount={pointsCount}
+              index={index}
+              fieldValue={connection.requests}
+              onApplyToAll={() => onApplyToAll(index, "requests")}
+              onApplyToNext={() => onApplyToNext(index, "requests")}
+              totalPoints={pointsCount}
+              arrowDirection="right"
+            />
+          </Box>
+        )}
 
         {/* Поля УСПД */}
         {connection.showUSPD && (

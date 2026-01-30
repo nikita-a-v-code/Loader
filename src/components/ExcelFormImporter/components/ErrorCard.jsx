@@ -152,11 +152,17 @@ const ErrorCard = ({
                 </Box>
                 {isStructureField ? (
                   <Autocomplete
+                    sx={{ width: "100%", minWidth: "250px" }}
                     options={options}
                     value={row[h] ?? ""}
                     inputValue={row[h] ?? ""}
                     filterOptions={(opts, state) => {
-                      if (h === "Тип абонента" || h === "Статус счета" || h === "Модель счетчика") {
+                      if (
+                        h === "Тип абонента" ||
+                        h === "Статус счета" ||
+                        h === "Модель счетчика" ||
+                        h === "Номер трансформаторной подстанции"
+                      ) {
                         const searchValue = (state.inputValue || "").toLowerCase();
                         return opts.filter((opt) => opt.toLowerCase().includes(searchValue));
                       }
@@ -164,17 +170,19 @@ const ErrorCard = ({
                       return getSimilarOptions(searchValue, opts);
                     }}
                     onChange={(event, newValue) => {
-                      onCellChange(rowIndex, h, newValue ?? "");
+                      if (!isContextField) {
+                        onCellChange(rowIndex, h, newValue ?? "");
+                      }
                     }}
                     onInputChange={(event, newInputValue, reason) => {
-                      if (reason === "input") {
+                      if (reason === "input" && !isContextField) {
                         onCellChange(rowIndex, h, newInputValue);
                       }
                     }}
                     freeSolo
                     openOnFocus
                     disableClearable
-                    disabled={isContextField}
+                    disabled={false}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -183,11 +191,17 @@ const ErrorCard = ({
                         helperText={rowErrors[h] || (isContextField ? "✓ Значение корректно" : "")}
                         variant="outlined"
                         size="small"
+                        fullWidth
+                        InputProps={{
+                          ...params.InputProps,
+                          readOnly: isContextField,
+                        }}
                         sx={
                           isContextField
                             ? {
                                 "& .MuiOutlinedInput-root": {
                                   backgroundColor: "#f5f5f5",
+                                  pointerEvents: "none",
                                 },
                               }
                             : {}
@@ -200,7 +214,11 @@ const ErrorCard = ({
                     key={`textfield-${rowIndex}-${h}`}
                     label={h}
                     value={row[h] ?? ""}
-                    onChange={(e) => onCellChange(rowIndex, h, e.target.value)}
+                    onChange={(e) => {
+                      if (!isContextField) {
+                        onCellChange(rowIndex, h, e.target.value);
+                      }
+                    }}
                     error={hasError}
                     helperText={rowErrors[h] || ""}
                     variant="outlined"
@@ -208,6 +226,21 @@ const ErrorCard = ({
                     size="small"
                     multiline
                     maxRows={3}
+                    InputProps={{
+                      readOnly: isContextField,
+                    }}
+                    sx={{
+                      width: "100%",
+                      minWidth: "250px",
+                      ...(isContextField
+                        ? {
+                            "& .MuiOutlinedInput-root": {
+                              backgroundColor: "#f5f5f5",
+                              pointerEvents: "none",
+                            },
+                          }
+                        : {}),
+                    }}
                   />
                 )}
               </Grid>

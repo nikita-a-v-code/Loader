@@ -8,6 +8,7 @@ import EnSelect from "../../../ui/EnSelect/EnSelect";
 import { validators, useValidationErrors, validateField } from "../../../utils/Validation/Validation";
 import ErrorAlert from "../../../ui/ErrorAlert";
 import ApiService from "../../../services/api";
+import { useAuth } from "../../../context/AuthContext";
 
 const Adress = ({
   onNext,
@@ -19,11 +20,11 @@ const Adress = ({
   pointsCount = 1, // Количество точек учета
   consumerData = {},
 }) => {
+  const { user } = useAuth();
   const [settl, setSettl] = useState([]);
   const [str, setStr] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     loadSettlements();
@@ -59,19 +60,17 @@ const Adress = ({
   // Функция для создания нового населенного пункта
   const createNewSettlement = async (name) => {
     try {
-      const newSettlement = await ApiService.createSettlement({ name });
+      const newSettlement = await ApiService.createSettlement({ name, userId: user?.id });
       setSettl((prev) => [...prev, newSettlement]);
-      setSuccessMessage(`Населенный пункт "${name}" успешно создан, выберите его из списка`);
-      setTimeout(() => setSuccessMessage(null), 3000);
+
       return newSettlement;
     } catch (err) {
       if (err.message.includes("409")) {
-        alert("Населенный пункт уже существует");
-        return null;
+        throw new Error("Населенный пункт уже существует");
       }
       console.error("Error creating settlement:", err);
       setError(err);
-      return null;
+      throw err;
     }
   };
 
@@ -81,22 +80,20 @@ const Adress = ({
     if (!selectedSettlement) return null;
 
     try {
-      const newStreet = await ApiService.createStreet({ name, settlement_id: selectedSettlement.id });
+      const newStreet = await ApiService.createStreet({ name, settlement_id: selectedSettlement.id, userId: user?.id });
       setStr((prev) => ({
         ...prev,
         [selectedSettlement.id]: [...(prev[selectedSettlement.id] || []), newStreet],
       }));
-      setSuccessMessage(`Улица "${name}" успешно создана, выберите ее из списка`);
-      setTimeout(() => setSuccessMessage(null), 3000);
+
       return newStreet;
     } catch (err) {
       if (err.message.includes("409")) {
-        alert("Улица уже существует в этом населенном пункте");
-        return null;
+        throw new Error("Улица уже существует в этом населенном пункте");
       }
       console.error("Error creating street:", err);
       setError(err);
-      return null;
+      throw err;
     }
   };
 
@@ -221,14 +218,8 @@ const Adress = ({
     /* Главный контейнер - организует вертикальную структуру точек учета и навигации. */
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {error && <ErrorAlert error={error} onRetry={loadSettlements} title="Ошибка загрузки данных из базы" />}
-      {successMessage && (
-        <Box sx={{ p: 2, bgcolor: "success.light", color: "success.contrastText", borderRadius: 1 }}>
-          {successMessage}
-        </Box>
-      )}
       {addressPoints.map((point, index) => {
         // Удаляем неиспользуемую переменную availableStreets
-
         return (
           /* Контейнер для отдельной точки учета - визуальное выделение*/
           <Box key={index} sx={{ mb: 1, border: "2px solid black", borderRadius: 2, p: 2 }}>

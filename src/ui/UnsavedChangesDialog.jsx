@@ -18,12 +18,12 @@ const UnsavedChangesDialog = ({ open, onConfirm, onCancel, targetRoute }) => {
     <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Warning color="warning" />
-        Несохраненные изменения
+        Внимание
       </DialogTitle>
 
       <DialogContent>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          У вас есть несохраненные данные. При переходе на "{getRouteTitle(targetRoute)}" все изменения будут потеряны.
+          При переходе на "{getRouteTitle(targetRoute)}" все изменения будут потеряны.
         </Typography>
       </DialogContent>
 

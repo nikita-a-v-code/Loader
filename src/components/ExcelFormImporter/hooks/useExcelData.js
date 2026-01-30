@@ -34,24 +34,36 @@ const useExcelData = () => {
   const [ipAddressList, setIpAddressList] = useState([]);
   const [protocolsList, setProtocolsList] = useState([]);
   const [protocolsListFull, setProtocolsListFull] = useState([]);
+  const [numberTPList, setNumberTPList] = useState([]);
 
   /**
    * Загружает все справочники с сервера.
    */
   const loadData = useCallback(async () => {
     try {
-      const [mpes, rkes, mu, settlements, subscriberType, accountStatus, deviceModel, ipAddresses, protocols] =
-        await Promise.all([
-          ApiService.getMpes(),
-          ApiService.getRkes(),
-          ApiService.getMasterUnits(),
-          ApiService.getSettlements(),
-          ApiService.getAbonentTypes(),
-          ApiService.getStatuses(),
-          ApiService.getDevices(),
-          ApiService.getIpAddresses(),
-          ApiService.getProtocols(),
-        ]);
+      const [
+        mpes,
+        rkes,
+        mu,
+        settlements,
+        subscriberType,
+        accountStatus,
+        deviceModel,
+        ipAddresses,
+        protocols,
+        numberTP,
+      ] = await Promise.all([
+        ApiService.getMpes(),
+        ApiService.getRkes(),
+        ApiService.getMasterUnits(),
+        ApiService.getSettlements(),
+        ApiService.getAbonentTypes(),
+        ApiService.getStatuses(),
+        ApiService.getDevices(),
+        ApiService.getIpAddresses(),
+        ApiService.getProtocols(),
+        ApiService.getNumberTP(),
+      ]);
       setMpesList(mpes.map((item) => item.name));
       setRkesList(rkes.map((item) => item.name));
       setMasterUnitsList(mu.map((item) => item.name));
@@ -64,6 +76,7 @@ const useExcelData = () => {
       setIpAddressList(ipAddresses);
       setProtocolsListFull(protocols);
       setProtocolsList(protocols.map((item) => item.name));
+      setNumberTPList(numberTP.map((item) => item.name));
     } catch (error) {
       console.error("Ошибка при загрузке структурных данных:", error);
     }
@@ -126,6 +139,50 @@ const useExcelData = () => {
               ...row,
               "Пароль на конфигурирование": device.password,
             };
+          }
+        }
+        return row;
+      });
+
+      if (!dataRows) {
+        setRows(updated);
+      }
+
+      return updated;
+    },
+    [rows, deviceListFull]
+  );
+
+  /**
+   * Автоматически заполняет поля "Запросы" и "Дополнительные параметры счетчика"
+   * на основе выбранной модели счетчика.
+   */
+  const autofillDeviceSettings = useCallback(
+    (dataRows = null) => {
+      const rowsToProcess = dataRows || rows;
+
+      const updated = rowsToProcess.map((row) => {
+        const modelValue = row["Модель счетчика"];
+        const requestsValue = row["Запросы"] || "";
+        const advSettingsValue = row["Дополнительные параметры счетчика"] || "";
+
+        if (modelValue) {
+          const device = deviceListFull.find((d) => d.name === modelValue);
+
+          if (device) {
+            const newRow = { ...row };
+
+            // Заполняем "Запросы" если пустое
+            if (requestsValue.trim() === "" && device.requests) {
+              newRow["Запросы"] = device.requests;
+            }
+
+            // Заполняем "Дополнительные параметры счетчика" если пустое
+            if (advSettingsValue.trim() === "" && device.adv_settings) {
+              newRow["Дополнительные параметры счетчика"] = device.adv_settings;
+            }
+
+            return newRow;
           }
         }
         return row;
@@ -233,6 +290,43 @@ const useExcelData = () => {
   );
 
   /**
+   * Автоматически заполняет коэффициенты ТТ и ТН единицами, если не заполнены.
+   * Также рассчитывает итоговый коэффициент (ТТ * ТН).
+   */
+  const autofillTransformerCoefficients = useCallback(
+    (dataRows = null) => {
+      const rowsToProcess = dataRows || rows;
+
+      const updated = rowsToProcess.map((row) => {
+        const ttCoeff = row["Коэффициент трансформации ТТ"] || "";
+        const tnCoeff = row["Коэффициент трансформации ТН"] || "";
+
+        const ttCoeffValue = ttCoeff.trim() === "" ? "1" : ttCoeff;
+        const tnCoeffValue = tnCoeff.trim() === "" ? "1" : tnCoeff;
+
+        // Рассчитываем итоговый коэффициент
+        const ttNum = parseFloat(ttCoeffValue) || 1;
+        const tnNum = parseFloat(tnCoeffValue) || 1;
+        const finalCoeff = (ttNum * tnNum).toString();
+
+        return {
+          ...row,
+          "Коэффициент трансформации ТТ": ttCoeffValue,
+          "Коэффициент трансформации ТН": tnCoeffValue,
+          "Коэффициент (итоговый)": finalCoeff,
+        };
+      });
+
+      if (!dataRows) {
+        setRows(updated);
+      }
+
+      return updated;
+    },
+    [rows]
+  );
+
+  /**
    * Автоматически назначает порты.
    */
   const assignPortsToRows = useCallback(
@@ -305,6 +399,7 @@ const useExcelData = () => {
       subscriberList,
       statusList,
       deviceList,
+      numberTPList,
     });
 
     const newErrors = await validateAllRows(rows, schema);
@@ -326,6 +421,7 @@ const useExcelData = () => {
     subscriberList,
     statusList,
     deviceList,
+    numberTPList,
     loadStreetsForSettlement,
   ]);
 
@@ -345,6 +441,7 @@ const useExcelData = () => {
         "Тип абонента": subscriberList,
         "Статус счета": statusList,
         "Модель счетчика": deviceList,
+        "Номер трансформаторной подстанции": numberTPList,
       };
 
       if (optionsMap[h]) return optionsMap[h];
@@ -356,7 +453,17 @@ const useExcelData = () => {
 
       return [];
     },
-    [mpesList, rkesList, masterUnitsList, settlementList, streetsBySettlement, subscriberList, statusList, deviceList]
+    [
+      mpesList,
+      rkesList,
+      masterUnitsList,
+      settlementList,
+      streetsBySettlement,
+      subscriberList,
+      statusList,
+      deviceList,
+      numberTPList,
+    ]
   );
 
   return {
@@ -378,14 +485,16 @@ const useExcelData = () => {
     protocolsList,
     protocolsListFull,
     streetsBySettlement,
+    numberTPList,
 
     // Методы
     loadStreetsForSettlement,
     autofillPasswords,
+    autofillDeviceSettings,
     calculateNetworkAddresses,
     autofillIpAddresses,
     autofillProtocols,
-    assignPortsToRows,
+    autofillTransformerCoefficients,
     validateAll,
     getOptionsForField,
   };

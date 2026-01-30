@@ -36,12 +36,15 @@ const EmailSenderDialog = ({ open, onClose, email, onEmailChange, onSend, sendin
           </Alert>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Отмена</Button>
-        <Button onClick={onSend} variant="contained" disabled={sending}>
-          {sending ? "Отправляем..." : "Отправить"}
-        </Button>
-      </DialogActions>
+      {/* Кнопки отображаются только если нет успешного сообщения */}
+      {!(message && message.type === "success" && message.text) && (
+        <DialogActions>
+          <Button onClick={onClose}>Отмена</Button>
+          <Button onClick={onSend} variant="contained" disabled={sending}>
+            {sending ? "Отправляем..." : "Отправить"}
+          </Button>
+        </DialogActions>
+      )}
     </Dialog>
   );
 };

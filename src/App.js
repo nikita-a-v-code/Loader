@@ -1,6 +1,6 @@
 import "./App.css";
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import SectionFilling from "./page/SectionFilling/SectionFilling";
 import SingleFilling from "./page/SingleFilling/SingleFilling";
 import ImportExcel from "./page/ImportExcel/ImportExcel";
@@ -9,6 +9,17 @@ import AdminPanel from "./page/AdminPanel/AdminPanel";
 import Login from "./page/Login/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CircularProgress, Box } from "@mui/material";
+
+// Компонент для защиты роутов только для админа
+const AdminRoute = ({ children }) => {
+  const { isAdmin } = useAuth();
+  
+  if (!isAdmin()) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
 
 // Компонент для защиты роутов
 const ProtectedRoutes = () => {
@@ -43,7 +54,7 @@ const ProtectedRoutes = () => {
       <Route path="/SectionFilling" element={<SectionFilling />} />
       <Route path="/SingleFilling" element={<SingleFilling />} />
       <Route path="/ImportExcel" element={<ImportExcel />} />
-      <Route path="/AdminPanel" element={<AdminPanel />} />
+      <Route path="/AdminPanel" element={<AdminRoute><AdminPanel /></AdminRoute>} />
     </Routes>
   );
 };

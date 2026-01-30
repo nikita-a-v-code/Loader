@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import ApiService from "../../../../services/api";
 import { validators, useValidationErrors } from "../../../../utils/Validation/Validation";
 import { calculateNetworkAddress } from "../../../../utils/networkAdress";
+import { isRimModelRequiringCommunicator } from "../../../../utils/Validation/validationRules";
 
 /**
  * Начальное состояние точки подключения
@@ -17,8 +18,10 @@ const createInitialPoint = (connectionData, index, defaultIp = "", defaultProtoc
   port: connectionData[index]?.port || "",
   portSaved: false,
   advSettings: connectionData[index]?.advSettings || "",
+  advSettingsEdited: false,
   nameConnection: connectionData[index]?.nameConnection || "",
   requests: connectionData[index]?.requests || "",
+  requestsEdited: false,
   nameUSPD: connectionData[index]?.nameUSPD || "",
   typeUSPD: connectionData[index]?.typeUSPD || "",
   numberUSPD: connectionData[index]?.numberUSPD || "",
@@ -93,14 +96,20 @@ const useConnectionData = ({
       const hasEmptyPorts = connectionPoints.some((point) => !point.port);
       if (!hasEmptyPorts) return;
 
-      const { nextPort } = await ApiService.getNextPort();
+      const newPoints = [...connectionPoints];
+      let currentPort = null;
 
-      const newPoints = connectionPoints.map((point, index) => {
-        if (!point.port) {
-          return { ...point, port: String(nextPort + index), portSaved: false };
+      for (let i = 0; i < newPoints.length; i++) {
+        if (!newPoints[i].port) {
+          if (currentPort === null) {
+            const { nextPort } = await ApiService.getNextPort();
+            currentPort = nextPort;
+          } else {
+            currentPort += 1;
+          }
+          newPoints[i] = { ...newPoints[i], port: String(currentPort), portSaved: false };
         }
-        return point;
-      });
+      }
 
       setConnectionPoints(newPoints);
       onConnectionChange(newPoints);
@@ -110,32 +119,67 @@ const useConnectionData = ({
   }, [connectionPoints, onConnectionChange]);
 
   /**
-   * Сохранение портов в базу
+   * Сохранение портов в базу с проверкой на занятость
+   * Возвращает обновленные точки подключения
    */
   const assignPortsToConnections = useCallback(async () => {
     try {
-      if (portsAssigned) return;
+      // Получаем актуальный список существующих портов
+      const existingPorts = await ApiService.getPorts();
+      // Приводим к строке для корректного сравнения
+      const existingPortNumbers = new Set(existingPorts.map((p) => String(p.port_number)));
 
-      for (let i = 0; i < connectionPoints.length; i++) {
-        if (connectionPoints[i].port && !connectionPoints[i].portSaved) {
+      // Работаем с локальной копией, чтобы избежать проблем с асинхронным обновлением состояния
+      const updatedPoints = [...connectionPoints];
+      let hasChanges = false;
+
+      for (let i = 0; i < updatedPoints.length; i++) {
+        if (!updatedPoints[i].port) continue;
+
+        let portToSave = String(updatedPoints[i].port);
+        let needSave = !updatedPoints[i].portSaved;
+
+        // Проверяем, занят ли порт
+        if (existingPortNumbers.has(portToSave)) {
+          // Порт занят, получаем новый
+          const { nextPort } = await ApiService.getNextPort();
+          portToSave = String(nextPort);
+          updatedPoints[i] = { ...updatedPoints[i], port: portToSave };
+          hasChanges = true;
+          needSave = true; // Новый порт нужно сохранить
+        }
+
+        // Если порт нужно сохранить
+        if (needSave) {
+          // Сохраняем порт в базу
           await ApiService.createPort({
-            portNumber: connectionPoints[i].port,
+            portNumber: portToSave,
             description: `Автоматически назначен для ${consumerData[i]?.consumerName || `Точка ${i + 1}`}`,
           });
 
-          const newPoints = [...connectionPoints];
-          newPoints[i] = { ...newPoints[i], portSaved: true };
-          setConnectionPoints(newPoints);
-          onConnectionChange(newPoints);
+          // Добавляем в set, чтобы следующие точки не использовали этот порт
+          existingPortNumbers.add(portToSave);
+
+          // Помечаем порт как сохраненный
+          updatedPoints[i] = { ...updatedPoints[i], port: portToSave, portSaved: true };
+          hasChanges = true;
         }
       }
 
+      // Обновляем состояние один раз в конце
+      if (hasChanges) {
+        setConnectionPoints(updatedPoints);
+        onConnectionChange(updatedPoints);
+      }
+
       setPortsAssigned(true);
+      return updatedPoints;
     } catch (err) {
       console.error("Error saving ports:", err);
       setPortsAssigned(true);
+      return connectionPoints;
     }
-  }, [connectionPoints, consumerData, onConnectionChange, portsAssigned]);
+  }, [connectionPoints, consumerData, onConnectionChange]);
 
   /**
    * Расчет итогового коэффициента
@@ -187,6 +231,8 @@ const useConnectionData = ({
         ...newPoints[pointIndex],
         [fieldName]: value,
         ...(fieldName === "port" ? { portSaved: false } : {}),
+        ...(fieldName === "requests" ? { requestsEdited: true } : {}),
+        ...(fieldName === "advSettings" ? { advSettingsEdited: true } : {}),
       };
       setConnectionPoints(newPoints);
       onConnectionChange(newPoints);
@@ -251,15 +297,32 @@ const useConnectionData = ({
    * Проверка заполненности обязательных полей
    */
   const allFilled = useCallback(() => {
-    return connectionPoints.every(
-      (point, index) =>
+    return connectionPoints.every((point, index) => {
+      // Получаем requests и advSettings: если поле редактировалось - берем из connection, иначе из deviceData
+      const requests = point.requestsEdited ? point.requests : (point.requests || deviceData[index]?.requests);
+      const advSettings = point.advSettingsEdited ? point.advSettings : (point.advSettings || deviceData[index]?.advSettings);
+
+      const baseFieldsFilled =
         (getNetworkAddress(index) || point.networkAddress) &&
         point.ipAddress &&
         point.port &&
         point.protocol &&
-        (point.simCardShort || point.simCardFull)
-    );
-  }, [connectionPoints, getNetworkAddress]);
+        (point.simCardShort || point.simCardFull) &&
+        requests &&
+        advSettings;
+
+      // Если базовые поля не заполнены, сразу возвращаем false
+      if (!baseFieldsFilled) return false;
+
+      // Проверяем номер коммуникатора для моделей РиМ
+      const deviceModel = deviceData[index]?.typeDevice;
+      if (isRimModelRequiringCommunicator(deviceModel)) {
+        return point.communicatorNumber && point.communicatorNumber.trim() !== "";
+      }
+
+      return true;
+    });
+  }, [connectionPoints, getNetworkAddress, deviceData]);
 
   // Загрузка при монтировании
   useEffect(() => {
@@ -267,11 +330,11 @@ const useConnectionData = ({
   }, []);
 
   // Назначение портов после загрузки данных (когда connectionPoints заполнены)
-  useEffect(() => {
-    if (connectionPoints.length > 0) {
-      assignPortsOnMount();
-    }
-  }, [connectionPoints.length]);
+  // useEffect(() => {
+  //   if (connectionPoints.length > 0) {
+  //     assignPortsOnMount();
+  //   }
+  // }, [connectionPoints.length]);
 
   return {
     // Справочники

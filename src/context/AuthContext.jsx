@@ -2,15 +2,16 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import ApiService from "../services/api";
 
 const AuthContext = createContext(null);
-
+// Кастомный хук
 export const useAuth = () => {
+  // Реакт хук
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
-
+// Хранит состояние авторизации
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,14 +82,14 @@ export const AuthProvider = ({ children }) => {
   const isViewer = () => user?.role_name === "viewer";
 
   const value = {
-    user,
-    loading,
-    login,
-    logout,
-    hasPermission,
-    isAdmin,
-    isOperator,
-    isViewer,
+    user, // { id, name, role, permissions... } или null
+    loading, // true/false - идет проверка авторизации
+    login, // функция для входа
+    logout, // функция для выхода
+    hasPermission, // проверка прав доступа
+    isAdmin, // проверка роли
+    isOperator, // проверка роли
+    isViewer, // проверка роли
     isAuthenticated: !!user,
   };
 

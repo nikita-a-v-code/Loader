@@ -6,6 +6,7 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
+import { getSimilarOptions } from "../../components/ExcelFormImporter/utils/fuzzySearch";
 
 export default function EnSelect({
   id = "select",
@@ -23,12 +24,34 @@ export default function EnSelect({
 }) {
   // Если включен поиск по списку, используем Autocomplete
   if (searchable) {
+    // Используем fuzzySearch для фильтрации с приоритетом точных совпадений
+    const filterOptions = (opts, { inputValue }) => {
+      if (!inputValue || inputValue.trim() === "") return opts;
+      
+      // Преобразуем опции в строки для getSimilarOptions
+      const stringOptions = opts.map((opt) => 
+        typeof opt === "object" ? (opt.label ?? opt.name ?? opt.value ?? "") : opt
+      );
+      
+      // Получаем отсортированные результаты
+      const sortedStrings = getSimilarOptions(inputValue, stringOptions);
+      
+      // Возвращаем оригинальные опции в том же порядке
+      return sortedStrings.map((str) => 
+        opts.find((opt) => {
+          const optLabel = typeof opt === "object" ? (opt.label ?? opt.name ?? opt.value ?? "") : opt;
+          return optLabel === str;
+        })
+      ).filter(Boolean);
+    };
+
     return (
       <FormControl required={required} sx={sx}>
         <Autocomplete
           id={id}
           options={options}
           disabled={disabled}
+          filterOptions={filterOptions}
           getOptionLabel={(option) => {
             if (typeof option === "object") {
               return option.label ?? option.name ?? option.value ?? "";

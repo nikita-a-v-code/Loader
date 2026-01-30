@@ -1,6 +1,6 @@
 import * as yup from "yup";
 import { validateNetworkCode } from "../networkCodeValidation";
-import { VALIDATION_RULES, NETWORK_CODE_FIELDS, NETWORK_CODE_FIELD_RULES } from "./validationRules";
+import { VALIDATION_RULES, NETWORK_CODE_FIELDS, NETWORK_CODE_FIELD_RULES, isRimModelRequiringCommunicator } from "./validationRules";
 
 /**
  * Создаёт динамическую схему валидации для Excel импорта.
@@ -27,6 +27,7 @@ export const createExcelValidationSchema = (lists) => {
     subscriberList = [],
     statusList = [],
     deviceList = [],
+    numberTPList = [],
   } = lists;
 
   // Сообщения об ошибках
@@ -174,7 +175,28 @@ export const createExcelValidationSchema = (lists) => {
     "Межповерочный интервал, лет": optionalWithRule("intervals"),
     "Коэффициент (итоговый)": optionalWithRule("coefficients"),
     Порт: optionalWithRule("port"),
-    "Номер коммуникатора (для счетчиков РиМ)": optionalWithRule("communicatorNumber"),
+    "Номер коммуникатора (для счетчиков РиМ)": yup
+      .string()
+      .trim()
+      .test("communicator-required-for-rim", "Обязательно для счетчиков РиМ", function (value) {
+        const deviceModel = this.parent["Модель счетчика"];
+        const isRimModel = isRimModelRequiringCommunicator(deviceModel);
+        
+        // Если это модель РиМ, поле обязательно
+        if (isRimModel && (!value || value === "")) {
+          return this.createError({ message: "Обязательно для счетчиков РиМ" });
+        }
+        
+        // Если значение есть, проверяем формат (только цифры)
+        if (value && value !== "") {
+          const rule = VALIDATION_RULES.communicatorNumber;
+          if (!rule.regex.test(value)) {
+            return this.createError({ message: rule.message });
+          }
+        }
+        
+        return true;
+      }),
     "Максимальная мощность, кВт": optionalWithRule("maxPower"),
     "Номер сим карты (короткий)": yup
       .string()
@@ -237,21 +259,8 @@ export const createExcelValidationSchema = (lists) => {
 
     "Код потребителя 3х-значный": networkCodeFieldValidation("Код потребителя 3х-значный"),
 
-    // Номер трансформаторной подстанции - обязательное поле, только цифры, максимум 5
-    "Номер трансформаторной подстанции": yup
-      .string()
-      .trim()
-      .required("Обязательное поле")
-      .test("transformer-validation", "Ошибка валидации", function (value) {
-        const rule = VALIDATION_RULES.transformerNumber;
-        if (!rule.regex.test(value)) {
-          return this.createError({ message: rule.message });
-        }
-        if (value.length > rule.maxLength) {
-          return this.createError({ message: `Максимум ${rule.maxLength} цифр` });
-        }
-        return true;
-      }),
+    // Номер трансформаторной подстанции - обязательное поле из списка
+    "Номер трансформаторной подстанции": requiredFromList(numberTPList, "Номер трансформаторной подстанции"),
   });
 };
 

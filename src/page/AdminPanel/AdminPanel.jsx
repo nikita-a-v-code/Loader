@@ -11,6 +11,8 @@ import Navbar from "../../components/common/Navbar/Navbar";
 import Sidebar from "../../components/common/Sidebar/Sidebar";
 import AddressManager from "../../components/adminPannel/AddressManager";
 import UsersManager from "../../components/adminPannel/UsersManager";
+import ActionLogsManager from "../../components/adminPannel/ActionLogsManager";
+import NumberTPManager from "../../components/adminPannel/NumberTPManager";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -24,8 +26,10 @@ const AdminPanel = () => {
     { label: "Статусы счетов", component: <StatusesManager /> },
     { label: "МПЭС/РКЭС/МУ", component: <StructureManager /> },
     { label: "Модели счетчиков", component: <DevicesManager /> },
+    { label: "Номера ТП", component: <NumberTPManager /> },
     { label: "Населенные пункты/Улицы", component: <AddressManager /> },
     { label: "Пользователи", component: <UsersManager /> },
+    { label: "Журнал действий", component: <ActionLogsManager /> },
     { label: "Настройки", component: <Settings /> },
   ];
 
