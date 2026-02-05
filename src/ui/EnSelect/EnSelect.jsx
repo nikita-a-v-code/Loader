@@ -27,22 +27,24 @@ export default function EnSelect({
     // Используем fuzzySearch для фильтрации с приоритетом точных совпадений
     const filterOptions = (opts, { inputValue }) => {
       if (!inputValue || inputValue.trim() === "") return opts;
-      
+
       // Преобразуем опции в строки для getSimilarOptions
-      const stringOptions = opts.map((opt) => 
+      const stringOptions = opts.map((opt) =>
         typeof opt === "object" ? (opt.label ?? opt.name ?? opt.value ?? "") : opt
       );
-      
+
       // Получаем отсортированные результаты
       const sortedStrings = getSimilarOptions(inputValue, stringOptions);
-      
+
       // Возвращаем оригинальные опции в том же порядке
-      return sortedStrings.map((str) => 
-        opts.find((opt) => {
-          const optLabel = typeof opt === "object" ? (opt.label ?? opt.name ?? opt.value ?? "") : opt;
-          return optLabel === str;
-        })
-      ).filter(Boolean);
+      return sortedStrings
+        .map((str) =>
+          opts.find((opt) => {
+            const optLabel = typeof opt === "object" ? (opt.label ?? opt.name ?? opt.value ?? "") : opt;
+            return optLabel === str;
+          })
+        )
+        .filter(Boolean);
     };
 
     return (
@@ -58,10 +60,12 @@ export default function EnSelect({
             }
             return option || "";
           }}
-          value={options.find(opt => {
-            const optValue = typeof opt === "object" ? opt.value : opt;
-            return optValue === value;
-          }) || null}
+          value={
+            options.find((opt) => {
+              const optValue = typeof opt === "object" ? opt.value : opt;
+              return optValue === value;
+            }) || null
+          }
           onChange={(event, newValue) => {
             const selectedValue = newValue ? (typeof newValue === "object" ? newValue.value : newValue) : "";
             onChange({ target: { value: selectedValue } });
@@ -73,7 +77,9 @@ export default function EnSelect({
               helperText={helperText}
               error={error}
               FormHelperTextProps={{
-                sx: error ? { color: 'red', fontSize: '14px', fontWeight: 'bold', whiteSpace: 'nowrap' } : { whiteSpace: 'nowrap' }
+                sx: error
+                  ? { color: "red", fontSize: "14px", fontWeight: "bold", whiteSpace: "nowrap" }
+                  : { whiteSpace: "nowrap" },
               }}
             />
           )}
@@ -100,7 +106,9 @@ export default function EnSelect({
           fullWidth
           error={error}
           FormHelperTextProps={{
-            sx: error ? { color: 'red', fontSize: '14px', fontWeight: 'bold', whiteSpace: 'nowrap' } : { whiteSpace: 'nowrap' }
+            sx: error
+              ? { color: "red", fontSize: "14px", fontWeight: "bold", whiteSpace: "nowrap" }
+              : { whiteSpace: "nowrap" },
           }}
         />
       </FormControl>
@@ -120,14 +128,14 @@ export default function EnSelect({
           onChange={onChange}
           renderValue={(selectedValue) => {
             if (!selectedValue) return "";
-            const selectedOption = options.find(opt => {
+            const selectedOption = options.find((opt) => {
               const optValue = typeof opt === "object" ? opt.value : opt;
               return optValue === selectedValue;
             });
             if (selectedOption) {
-              return typeof selectedOption === "object" ? 
-                selectedOption.label ?? selectedOption.name ?? selectedOption.value : 
-                selectedOption;
+              return typeof selectedOption === "object"
+                ? (selectedOption.label ?? selectedOption.name ?? selectedOption.value)
+                : selectedOption;
             }
             return selectedValue;
           }}
@@ -138,7 +146,7 @@ export default function EnSelect({
           {Array.isArray(options) && options.length > 0 ? (
             options.map((opt, i) => {
               const optValue = typeof opt === "object" ? opt.value : opt;
-              const optLabel = typeof opt === "object" ? opt.label ?? opt.name ?? opt.value : opt;
+              const optLabel = typeof opt === "object" ? (opt.label ?? opt.name ?? opt.value) : opt;
               return (
                 <MenuItem key={String(optValue) + i} value={optValue}>
                   {optLabel}
@@ -150,7 +158,13 @@ export default function EnSelect({
           )}
         </Select>
         {helperText ? (
-          <FormHelperText sx={error ? { color: 'red', fontSize: '14px', fontWeight: 'bold', whiteSpace: 'nowrap' } : { whiteSpace: 'nowrap' }}>
+          <FormHelperText
+            sx={
+              error
+                ? { color: "red", fontSize: "14px", fontWeight: "bold", whiteSpace: "nowrap" }
+                : { whiteSpace: "nowrap" }
+            }
+          >
             {helperText}
           </FormHelperText>
         ) : null}

@@ -47,6 +47,7 @@ const Adress = ({
 
   /* Загрузка улиц по населенным пунктам */
   const loadStreetsBySettlements = async (settlementId) => {
+    // Проверяем есть ли уже в кэше улицы для данного населенного пункта - если есть выходим
     if (str[settlementId]) return;
     try {
       const data = await ApiService.getStreetsBySettlement(settlementId);

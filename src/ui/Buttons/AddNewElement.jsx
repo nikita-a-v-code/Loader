@@ -34,7 +34,7 @@ const AddNewElement = ({
   const settlementPrefixes = ["г. ", "д. ", "пгт. ", "пос. ", "с. "];
 
   // Допустимые префиксы для улиц
-  const streetPrefixes = ["пер. ", "пл. ", "ул. ", "пр-кт "];
+  const streetPrefixes = ["пер. ", "пл. ", "ул. ", "пр-кт ", "проезд"];
 
   // Проверка на дубликаты названий населенных пунктов
   const checkSettlementDuplicate = (name) => {

@@ -4,8 +4,6 @@ import AbonentTypesManager from "../../components/adminPannel/AbonentTypesManage
 import StatusesManager from "../../components/adminPannel/StatusesManager";
 import StructureManager from "../../components/adminPannel/StructureManager";
 import DevicesManager from "../../components/adminPannel/DevicesManager";
-import ConnectionsManager from "../../components/adminPannel/ConnectionsManager";
-import ProtocolsManager from "../../components/adminPannel/ProtocolsManager";
 import Settings from "../../components/adminPannel/Settings";
 import Navbar from "../../components/common/Navbar/Navbar";
 import Sidebar from "../../components/common/Sidebar/Sidebar";

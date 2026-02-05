@@ -20,7 +20,6 @@ const Device = ({
 }) => {
   const { isAdmin } = useAuth();
   const showRestrictedFields = isAdmin(); // Показывать скрытые поля только админам
-  
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -68,8 +67,6 @@ const Device = ({
         numberCasing: deviceData[i]?.numberCasing || "",
         password: deviceData[i]?.password || "",
         note: deviceData[i]?.note || "",
-        requests: deviceData[i]?.requests || "",
-        advSettings: deviceData[i]?.advSettings || "",
       });
     }
     return device;
@@ -117,13 +114,11 @@ const Device = ({
       [fieldName]: value,
     };
 
-    // Автоматическая подстановка пароля, запросов и доп. параметров при выборе модели счетчика
+    // Автоматическая подстановка пароля при выборе модели счетчика
     if (fieldName === "typeDevice") {
       const selectedDevice = deviceTypes.find((device) => device.name === value);
       if (selectedDevice) {
         newPoints[pointIndex].password = selectedDevice.password;
-        newPoints[pointIndex].requests = selectedDevice.requests || "";
-        newPoints[pointIndex].advSettings = selectedDevice.adv_settings || "";
       }
     }
 
@@ -141,14 +136,12 @@ const Device = ({
       [fieldName]: sourceValue,
     }));
 
-    // При копировании модели счетчика также копируем пароль, запросы и доп. параметры
+    // При копировании модели счетчика также копируем пароль
     if (fieldName === "typeDevice") {
       const selectedDevice = deviceTypes.find((device) => device.name === sourceValue);
       if (selectedDevice) {
         newPoints.forEach((point) => {
           point.password = selectedDevice.password;
-          point.requests = selectedDevice.requests || "";
-          point.advSettings = selectedDevice.adv_settings || "";
         });
       }
     }
@@ -168,13 +161,11 @@ const Device = ({
       [fieldName]: sourceValue,
     };
 
-    // При копировании модели счетчика также копируем пароль, запросы и доп. параметры
+    // При копировании модели счетчика также копируем пароль
     if (fieldName === "typeDevice") {
       const selectedDevice = deviceTypes.find((device) => device.name === sourceValue);
       if (selectedDevice) {
         newPoints[sourceIndex + 1].password = selectedDevice.password;
-        newPoints[sourceIndex + 1].requests = selectedDevice.requests || "";
-        newPoints[sourceIndex + 1].advSettings = selectedDevice.adv_settings || "";
       }
     }
 

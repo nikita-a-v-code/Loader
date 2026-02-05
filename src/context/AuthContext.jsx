@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("auth_token");
   };
 
-  // Проверка прав доступа
+  // Проверка прав доступа из базы данных
   const hasPermission = (permission) => {
     if (!user) return false;
     if (user.permissions?.all) return true;

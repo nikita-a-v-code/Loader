@@ -8,6 +8,7 @@ const drawerWidth = 240;
 export default function Sidebar() {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
+  //Не используется - меню всегда открыто, но оставлен для возможного будущего использования
   React.useEffect(() => {
     const handler = (e) => {
       if (e && e.detail && typeof e.detail.open === "boolean") setMenuOpen(e.detail.open);

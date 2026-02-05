@@ -3,11 +3,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import UnsavedChangesDialog from "../../../../ui/UnsavedChangesDialog";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import CardActionArea from "@mui/material/CardActionArea";
 import Typography from "@mui/material/Typography";
-import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -159,54 +155,4 @@ export default function NavigationSections({ showAsSidebar = false }) {
       </Box>
     );
   }
-
-  return (
-    <Box sx={{ p: 3, maxWidth: 1200, margin: "0 auto" }}>
-      <Typography variant="h4" sx={{ mb: 1, textAlign: "center", fontWeight: "bold" }}>
-        Выберите способ заполнения
-      </Typography>
-      <Typography variant="subtitle1" sx={{ mb: 4, textAlign: "center", color: "text.secondary" }}>
-        Выберите наиболее подходящий вариант для вашей задачи
-      </Typography>
-
-      <Grid container spacing={3}>
-        {sections.map((section, index) => (
-          <Grid item xs={12} md={4} key={index}>
-            <Card
-              sx={{
-                height: "100%",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  transform: "translateY(-8px)",
-                  boxShadow: 6,
-                },
-              }}
-            >
-              <CardActionArea onClick={() => handleCardClick(section.route)} sx={{ height: "100%", p: 3 }}>
-                <CardContent sx={{ textAlign: "center", height: "100%", display: "flex", flexDirection: "column" }}>
-                  <Box sx={{ color: section.color, mb: 2 }}>{section.icon}</Box>
-                  <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold" }}>
-                    {section.title}
-                  </Typography>
-                  <Typography variant="subtitle2" sx={{ mb: 2, color: section.color, fontWeight: "medium" }}>
-                    {section.subtitle}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: "text.secondary", flexGrow: 1 }}>
-                    {section.description}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      <UnsavedChangesDialog
-        open={dialogOpen}
-        onConfirm={handleConfirmNavigation}
-        onCancel={handleCancelNavigation}
-        targetRoute={targetRoute}
-      />
-    </Box>
-  );
 }

@@ -1,3 +1,4 @@
+// Компонент страницы входа в систему
 import React, { useState } from "react";
 import {
   Box,
@@ -15,12 +16,18 @@ import { Visibility, VisibilityOff, Login as LoginIcon } from "@mui/icons-materi
 import { useAuth } from "../../context/AuthContext";
 
 const Login = () => {
+  // Получаем функцию входа из контекста аутентификации
   const { login } = useAuth();
+  // Состояние для данных формы (логин и пароль)
   const [formData, setFormData] = useState({ login: "", password: "" });
+  // Состояние для показа/скрытия пароля
   const [showPassword, setShowPassword] = useState(false);
+  // Состояние для сообщения об ошибке
   const [error, setError] = useState("");
+  // Состояние загрузки (для индикатора)
   const [loading, setLoading] = useState(false);
 
+  // Обработчик отправки формы
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -29,18 +36,22 @@ const Login = () => {
       return;
     }
 
+    // Устанавливаем загрузку и очищаем ошибки
     setLoading(true);
     setError("");
 
+    // Вызываем функцию входа из контекста
     const result = await login(formData.login, formData.password);
 
     setLoading(false);
 
+    // Если вход неудачен, показываем ошибку
     if (!result.success) {
       setError(result.error);
     }
   };
 
+  // Нажимаем на войти помимо мышки - клавиша Enter
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handleSubmit(e);
@@ -58,6 +69,7 @@ const Login = () => {
         padding: 2,
       }}
     >
+      {/* Карточка формы входа */}
       <Card
         sx={{
           maxWidth: 400,
@@ -68,6 +80,7 @@ const Login = () => {
         }}
       >
         <CardContent sx={{ p: 4 }}>
+          {/* Заголовок и подзаголовок */}
           <Box sx={{ textAlign: "center", mb: 4 }}>
             <Typography
               variant="h4"
@@ -87,13 +100,16 @@ const Login = () => {
             </Typography>
           </Box>
 
+          {/* Сообщение об ошибке, если есть */}
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
 
+          {/* Форма входа */}
           <form onSubmit={handleSubmit}>
+            {/* Поле логина */}
             <TextField
               fullWidth
               label="Логин"
@@ -106,6 +122,7 @@ const Login = () => {
               autoFocus
             />
 
+            {/* Поле пароля с кнопкой показа */}
             <TextField
               fullWidth
               label="Пароль"
@@ -127,6 +144,7 @@ const Login = () => {
               }}
             />
 
+            {/* Кнопка входа */}
             <Button
               fullWidth
               variant="contained"
