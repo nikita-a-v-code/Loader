@@ -35,9 +35,7 @@ const ExcelFormImporter = () => {
     touchedFields, // Отслеживание редактированных полей {rowIndex: Set(['field1', 'field2'])}
     setTouchedFields,
     loadStreetsForSettlement, // Загрузка улиц для населенного пункта
-    autofillPasswords, // Автозаполнение паролей для счетчиков
-    autofillDeviceSettings, // Автозаполнение Запросов и Дополнительных параметров счетчика
-    autofillIpAddresses, // Автозаполнение IP адресов
+    autofillFromDeviceModel, // Автозаполнение полей из модели счетчика (пароль, запросы, доп. параметры, IP)
     calculateNetworkAddresses, // Расчет сетевых адресов
     autofillProtocols, // Автозаполнение протоколов
     autofillTransformerCoefficients, // Автозаполнение коэффициентов ТТ и ТН
@@ -218,8 +216,11 @@ const ExcelFormImporter = () => {
       return;
     }
     try {
-      // Применяем автозаполнение коэффициентов перед экспортом
-      let processedRows = autofillTransformerCoefficients(rows);
+      // Применяем все автозаполнения перед экспортом
+      let processedRows = calculateNetworkAddresses(rows);
+      processedRows = autofillFromDeviceModel(processedRows);
+      processedRows = autofillProtocols(processedRows);
+      processedRows = autofillTransformerCoefficients(processedRows);
       
       // Скрываем поля для не-админов
       if (!isAdmin) {
@@ -241,7 +242,7 @@ const ExcelFormImporter = () => {
       console.error("Export error:", err);
       alert("Ошибка при экспорте: " + err.message);
     }
-  }, [rows, validateAllWithOverrides, autofillTransformerCoefficients, isAdmin]);
+  }, [rows, validateAllWithOverrides, calculateNetworkAddresses, autofillFromDeviceModel, autofillProtocols, autofillTransformerCoefficients, isAdmin]);
 
   /**
    * Подготовка данных для отправки на email.
@@ -251,14 +252,12 @@ const ExcelFormImporter = () => {
   const processDataForEmail = useCallback(
     async (data) => {
       let processed = calculateNetworkAddresses(data); // Расчет сетевых адресов
-      processed = autofillPasswords(processed); // Пароли для счетчиков
-      processed = autofillDeviceSettings(processed); // Запросы и Дополнительные параметры счетчика
-      processed = autofillIpAddresses(processed); // IP адреса
+      processed = autofillFromDeviceModel(processed); // Пароль, запросы, доп. параметры, IP из модели счетчика
       processed = autofillProtocols(processed); // Автозаполнение протоколов
       processed = autofillTransformerCoefficients(processed); // Автозаполнение коэффициентов ТТ и ТН
       return processed;
     },
-    [calculateNetworkAddresses, autofillPasswords, autofillDeviceSettings, autofillIpAddresses, autofillProtocols, autofillTransformerCoefficients]
+    [calculateNetworkAddresses, autofillFromDeviceModel, autofillProtocols, autofillTransformerCoefficients]
   );
 
   // === Хук для управления отправкой на email ===

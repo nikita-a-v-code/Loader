@@ -87,6 +87,20 @@ const useSingleFormHandlers = ({
         if (!validateField(value, validators.communicatorNumber, errorKey)) return;
       }
 
+      // Специальная обработка для typeDevice - обновляем все связанные поля сразу
+      if (fieldName === "typeDevice") {
+        const selectedDevice = deviceTypes.find((device) => device.name === value);
+        setFormData((prev) => ({ 
+          ...prev, 
+          typeDevice: value,
+          password: selectedDevice?.password || prev.password,
+          requests: selectedDevice?.requests || "",
+          advSettings: selectedDevice?.adv_settings || "",
+          ipAddress: selectedDevice?.ip_address || ""
+        }));
+        return;
+      }
+
       // Обновляем состояние
       setFormData((prev) => ({ ...prev, [fieldName]: value }));
 
@@ -115,18 +129,6 @@ const useSingleFormHandlers = ({
         const selectedSettlement = settl.find((s) => s.name === value);
         if (selectedSettlement) {
           loadStreetsBySettlements(selectedSettlement.id);
-        }
-      }
-
-      if (fieldName === "typeDevice") {
-        const selectedDevice = deviceTypes.find((device) => device.name === value);
-        if (selectedDevice) {
-          setFormData((prev) => ({ 
-            ...prev, 
-            password: selectedDevice.password,
-            requests: selectedDevice.requests || "",
-            advSettings: selectedDevice.adv_settings || ""
-          }));
         }
       }
     },

@@ -41,7 +41,16 @@ export const parseExcelFile = async (file) => {
     .map((rowArr) => {
       const obj = {};
       headers.forEach((h, i) => {
-        obj[h] = rowArr[i] !== undefined && rowArr[i] !== null ? String(rowArr[i]).trim() : "";
+        // Нормализуем значение: убираем пробелы, неразрывные пробелы и т.д.
+        // Если после очистки получаем пустую строку - сохраняем как пустую строку
+        const rawValue = rowArr[i];
+        if (rawValue === undefined || rawValue === null || rawValue === "") {
+          obj[h] = "";
+        } else {
+          // Преобразуем в строку и очищаем от пробелов и спецсимволов
+          const trimmed = String(rawValue).trim();
+          obj[h] = trimmed === "" ? "" : trimmed;
+        }
       });
       return obj;
     })

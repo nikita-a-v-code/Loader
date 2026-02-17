@@ -31,7 +31,6 @@ const useExcelData = () => {
   const [statusList, setStatusList] = useState([]);
   const [deviceList, setDeviceList] = useState([]);
   const [deviceListFull, setDeviceListFull] = useState([]);
-  const [ipAddressList, setIpAddressList] = useState([]);
   const [protocolsList, setProtocolsList] = useState([]);
   const [protocolsListFull, setProtocolsListFull] = useState([]);
   const [numberTPList, setNumberTPList] = useState([]);
@@ -41,29 +40,18 @@ const useExcelData = () => {
    */
   const loadData = useCallback(async () => {
     try {
-      const [
-        mpes,
-        rkes,
-        mu,
-        settlements,
-        subscriberType,
-        accountStatus,
-        deviceModel,
-        ipAddresses,
-        protocols,
-        numberTP,
-      ] = await Promise.all([
-        ApiService.getMpes(),
-        ApiService.getRkes(),
-        ApiService.getMasterUnits(),
-        ApiService.getSettlements(),
-        ApiService.getAbonentTypes(),
-        ApiService.getStatuses(),
-        ApiService.getDevices(),
-        ApiService.getIpAddresses(),
-        ApiService.getProtocols(),
-        ApiService.getNumberTP(),
-      ]);
+      const [mpes, rkes, mu, settlements, subscriberType, accountStatus, deviceModel, protocols, numberTP] =
+        await Promise.all([
+          ApiService.getMpes(),
+          ApiService.getRkes(),
+          ApiService.getMasterUnits(),
+          ApiService.getSettlements(),
+          ApiService.getAbonentTypes(),
+          ApiService.getStatuses(),
+          ApiService.getDevices(),
+          ApiService.getProtocols(),
+          ApiService.getNumberTP(),
+        ]);
       setMpesList(mpes.map((item) => item.name));
       setRkesList(rkes.map((item) => item.name));
       setMasterUnitsList(mu.map((item) => item.name));
@@ -73,7 +61,6 @@ const useExcelData = () => {
       setStatusList(accountStatus.map((item) => item.name));
       setDeviceList(deviceModel.map((item) => item.name));
       setDeviceListFull(deviceModel);
-      setIpAddressList(ipAddresses);
       setProtocolsListFull(protocols);
       setProtocolsList(protocols.map((item) => item.name));
       setNumberTPList(numberTP.map((item) => item.name));
@@ -121,71 +108,50 @@ const useExcelData = () => {
   );
 
   /**
-   * Заполняет пароли для моделей счетчиков (только для отправки на email).
+   * Автоматически заполняет все поля из модели счетчика:
+   * - Пароль на конфигурирование
+   * - Запросы
+   * - Дополнительные параметры счетчика
+   * - IP адрес
    */
-  const autofillPasswords = useCallback(
+  const autofillFromDeviceModel = useCallback(
     (dataRows = null) => {
       const rowsToProcess = dataRows || rows;
-      // Из объекта row (строки Excel) взять значение поля 'Модель счетчика' и 'Пароль на конфигурирование'
+
       const updated = rowsToProcess.map((row) => {
         const modelValue = row["Модель счетчика"];
+        if (!modelValue) return row;
+
+        const device = deviceListFull.find((d) => d.name === modelValue);
+        if (!device) return row;
+
+        const newRow = { ...row };
+
+        // Заполняем пароль если пустое
         const passwordValue = row["Пароль на конфигурирование"] || "";
-
-        if (modelValue && passwordValue.trim() === "") {
-          const device = deviceListFull.find((d) => d.name === modelValue);
-
-          if (device && device.password) {
-            return {
-              ...row,
-              "Пароль на конфигурирование": device.password,
-            };
-          }
+        if (passwordValue.trim() === "" && device.password) {
+          newRow["Пароль на конфигурирование"] = device.password;
         }
-        return row;
-      });
 
-      if (!dataRows) {
-        setRows(updated);
-      }
-
-      return updated;
-    },
-    [rows, deviceListFull]
-  );
-
-  /**
-   * Автоматически заполняет поля "Запросы" и "Дополнительные параметры счетчика"
-   * на основе выбранной модели счетчика.
-   */
-  const autofillDeviceSettings = useCallback(
-    (dataRows = null) => {
-      const rowsToProcess = dataRows || rows;
-
-      const updated = rowsToProcess.map((row) => {
-        const modelValue = row["Модель счетчика"];
+        // Заполняем запросы если пустое
         const requestsValue = row["Запросы"] || "";
-        const advSettingsValue = row["Дополнительные параметры счетчика"] || "";
-
-        if (modelValue) {
-          const device = deviceListFull.find((d) => d.name === modelValue);
-
-          if (device) {
-            const newRow = { ...row };
-
-            // Заполняем "Запросы" если пустое
-            if (requestsValue.trim() === "" && device.requests) {
-              newRow["Запросы"] = device.requests;
-            }
-
-            // Заполняем "Дополнительные параметры счетчика" если пустое
-            if (advSettingsValue.trim() === "" && device.adv_settings) {
-              newRow["Дополнительные параметры счетчика"] = device.adv_settings;
-            }
-
-            return newRow;
-          }
+        if (requestsValue.trim() === "" && device.requests) {
+          newRow["Запросы"] = device.requests;
         }
-        return row;
+
+        // Заполняем доп. параметры если пустое
+        const advSettingsValue = row["Дополнительные параметры счетчика"] || "";
+        if (advSettingsValue.trim() === "" && device.adv_settings) {
+          newRow["Дополнительные параметры счетчика"] = device.adv_settings;
+        }
+
+        // Заполняем IP адрес если пустое
+        const ipValue = row["IP адрес"] || "";
+        if (ipValue.trim() === "" && device.ip_address) {
+          newRow["IP адрес"] = device.ip_address;
+        }
+
+        return newRow;
       });
 
       if (!dataRows) {
@@ -221,38 +187,6 @@ const useExcelData = () => {
       return updated;
     },
     [rows]
-  );
-
-  /**
-   * Автоматически заполняет IP адреса.
-   */
-  const autofillIpAddresses = useCallback(
-    (dataRows = null) => {
-      const rowsToProcess = dataRows || rows;
-      // В ipAddressList ищем строку в которой поле item.is_default true
-      const defaultIpAddress =
-        ipAddressList.find((item) => item.is_default)?.address || ipAddressList[0]?.address || "";
-
-      const updated = rowsToProcess.map((row) => {
-        const ipValue = row["IP адрес"] || "";
-
-        if (ipValue.trim() === "" && defaultIpAddress) {
-          return {
-            ...row,
-            "IP адрес": defaultIpAddress,
-          };
-        }
-        // Если IP уже заполнен оставляем как есть
-        return row;
-      });
-
-      if (!dataRows) {
-        setRows(updated);
-      }
-
-      return updated;
-    },
-    [rows, ipAddressList]
   );
 
   /**
@@ -481,7 +415,6 @@ const useExcelData = () => {
 
     // Справочники
     deviceListFull,
-    ipAddressList,
     protocolsList,
     protocolsListFull,
     streetsBySettlement,
@@ -489,10 +422,8 @@ const useExcelData = () => {
 
     // Методы
     loadStreetsForSettlement,
-    autofillPasswords,
-    autofillDeviceSettings,
+    autofillFromDeviceModel,
     calculateNetworkAddresses,
-    autofillIpAddresses,
     autofillProtocols,
     autofillTransformerCoefficients,
     validateAll,

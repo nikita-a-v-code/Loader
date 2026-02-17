@@ -101,27 +101,25 @@ const useSingleFormData = () => {
   const [abonentTypes, setAbonentTypes] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
-  const [ipAddresses, setIpAddresses] = useState([]);
   const [protocols, setProtocols] = useState([]);
   const [defaultEmail, setDefaultEmail] = useState("");
   const [numberTP, setNumberTP] = useState([]);
 
   // Дефолтные значения для новых карточек
-  const [defaults, setDefaults] = useState({ ipAddress: "", protocol: "" });
+  const [defaults, setDefaults] = useState({ protocol: "" });
 
   const loadAllData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [mpesData, settlData, abonentData, statusData, deviceData, ipData, protocolData, numberTPData] =
+      const [mpesData, settlData, abonentData, statusData, deviceData, protocolData, numberTPData] =
         await Promise.all([
           ApiService.getMpes(),
           ApiService.getSettlements(),
           ApiService.getAbonentTypes(),
           ApiService.getStatuses(),
           ApiService.getDevices(),
-          ApiService.getIpAddresses(),
           ApiService.getProtocols(),
           ApiService.getNumberTP(),
         ]);
@@ -131,15 +129,13 @@ const useSingleFormData = () => {
       setAbonentTypes(abonentData);
       setStatuses(statusData);
       setDeviceTypes(deviceData);
-      setIpAddresses(ipData);
       setProtocols(protocolData);
       setNumberTP(numberTPData);
 
-      // Получаем дефолтные значения из справочников
-      const defaultIp = ipData.find((item) => item.is_default)?.address || ipData[0]?.address || "";
+      // Получаем дефолтный протокол
       const defaultProtocol = protocolData.find((item) => item.is_default)?.name || protocolData[0]?.name || "";
 
-      setDefaults({ ipAddress: defaultIp, protocol: defaultProtocol });
+      setDefaults({ protocol: defaultProtocol });
     } catch (err) {
       console.error("Error loading data:", err);
       setError(err);
@@ -240,7 +236,6 @@ const useSingleFormData = () => {
     abonentTypes,
     statuses,
     deviceTypes,
-    ipAddresses,
     protocols,
     numberTP,
     defaults,

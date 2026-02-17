@@ -8,7 +8,7 @@ const useCardManager = (defaults) => {
 
   // Применение дефолтных значений к первой карточке
   const applyDefaults = useCallback(() => {
-    if (defaults.ipAddress && defaults.protocol) {
+    if (defaults.protocol) {
       setCards((prev) =>
         prev.map((card, index) =>
           index === 0
@@ -16,7 +16,6 @@ const useCardManager = (defaults) => {
                 ...card,
                 formData: {
                   ...card.formData,
-                  ipAddress: card.formData.ipAddress || defaults.ipAddress,
                   protocol: card.formData.protocol || defaults.protocol,
                 },
               }
@@ -45,8 +44,7 @@ const useCardManager = (defaults) => {
       id: newCardId,
       formData: {
         ...initialFormData,
-        // Применяем дефолтные значения из справочников
-        ipAddress: defaults.ipAddress || "",
+        // Применяем дефолтный протокол из справочников
         protocol: defaults.protocol || "",
       },
     };

@@ -44,7 +44,6 @@ const SingleFormCard = ({
     abonentTypes,
     statuses,
     deviceTypes,
-    ipAddresses,
     protocols,
     numberTP,
     loadRkesByMpes,
@@ -283,8 +282,8 @@ const SingleFormCard = ({
           <ConnectionSection
             formData={formData}
             handleFieldChange={handleFieldChange}
-            ipAddresses={ipAddresses}
             protocols={protocols}
+            deviceTypes={deviceTypes}
             getNetworkAddress={getNetworkAddress}
             validationErrors={validationErrors}
             errorMessages={errorMessages}

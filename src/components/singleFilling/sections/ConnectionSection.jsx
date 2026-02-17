@@ -12,8 +12,8 @@ import { isRimModelRequiringCommunicator } from "../../../utils/Validation/valid
 const ConnectionSection = ({
   formData,
   handleFieldChange,
-  ipAddresses,
   protocols,
+  deviceTypes,
   getNetworkAddress,
   validationErrors = {},
   errorMessages = {},
@@ -46,19 +46,9 @@ const ConnectionSection = ({
         {showRestrictedFields && (
           <EnSelect
             label="IP адрес"
-            options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
             value={formData.ipAddress}
             onChange={(e) => handleFieldChange("ipAddress", e.target.value)}
-            helperText="Обязательное поле"
-            required
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": {
-                  borderColor: formData.ipAddress ? "success.main" : "error.main",
-                  borderWidth: "3px",
-                },
-              },
-            }}
+            freeInput
           />
         )}
         {showRestrictedFields && (

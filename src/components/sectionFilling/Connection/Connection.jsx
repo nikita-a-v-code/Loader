@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import ErrorAlert from "../../../ui/ErrorAlert";
 import EmailSenderDialog from "../../../ui/EmailSenderDialog";
@@ -24,9 +24,18 @@ const Connection = ({
   networkData = {},
 }) => {
   const { user } = useAuth();
+  
+  // Загружаем справочник моделей счетчиков для получения IP адресов
+  const [deviceTypes, setDeviceTypes] = useState([]);
+  
+  useEffect(() => {
+    ApiService.getDevices()
+      .then(setDeviceTypes)
+      .catch((err) => console.error("Error loading device types:", err));
+  }, []);
+  
   // Хук для управления данными подключения
   const {
-    ipAddresses,
     protocols,
     loading,
     error,
@@ -41,7 +50,9 @@ const Connection = ({
     allFilled,
     calculateFinalCoeff,
     getNetworkAddress,
-    assignPortsToConnections,
+    getIpFromDeviceModel,
+    getRequestsFromDeviceModel,
+    getAdvSettingsFromDeviceModel,
   } = useConnectionData({
     connectionData,
     onConnectionChange,
@@ -49,6 +60,7 @@ const Connection = ({
     transformData,
     deviceData,
     consumerData,
+    deviceTypes,
   });
 
   // Состояние для диалога email
@@ -134,15 +146,15 @@ const Connection = ({
         networkAddress: getNetworkAddress(i) || updatedPoints[i]?.networkAddress || "",
         simCardFull: updatedPoints[i]?.simCardFull || "",
         simCardShort: updatedPoints[i]?.simCardShort || "",
-        ipAddress: updatedPoints[i]?.ipAddress || "",
+        ipAddress: updatedPoints[i]?.ipAddress || getIpFromDeviceModel(deviceData[i]?.typeDevice) || "",
         ...(includePort || isAdminExport ? { port: updatedPoints[i]?.port || "" } : {}),
         communicatorNumber: updatedPoints[i]?.communicatorNumber || "",
         protocol: updatedPoints[i]?.protocol || "",
         finalCoeff: calculateFinalCoeff(i) || "",
         comPorts: updatedPoints[i]?.comPorts || "",
-        advSettings: updatedPoints[i]?.advSettings || deviceData[i]?.advSettings || "",
+        advSettings: updatedPoints[i]?.advSettings || getAdvSettingsFromDeviceModel(deviceData[i]?.typeDevice) || "",
         nameConnection: updatedPoints[i]?.nameConnection || "",
-        requests: updatedPoints[i]?.requests || deviceData[i]?.requests || "",
+        requests: updatedPoints[i]?.requests || getRequestsFromDeviceModel(deviceData[i]?.typeDevice) || "",
         nameUSPD: updatedPoints[i]?.nameUSPD || "",
         typeUSPD: updatedPoints[i]?.typeUSPD || "",
         numberUSPD: updatedPoints[i]?.numberUSPD || "",
@@ -219,7 +231,6 @@ const Connection = ({
             deviceRequests={deviceData[index]?.requests}
             deviceAdvSettings={deviceData[index]?.advSettings}
             pointsCount={pointsCount}
-            ipAddresses={ipAddresses}
             protocols={protocols}
             validationErrors={validationErrors}
             networkAddress={getNetworkAddress(index)}

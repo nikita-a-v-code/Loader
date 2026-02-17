@@ -21,7 +21,6 @@ const ConnectionPointCard = ({
   deviceRequests,
   deviceAdvSettings,
   pointsCount,
-  ipAddresses,
   protocols,
   validationErrors,
   networkAddress,
@@ -72,17 +71,15 @@ const ConnectionPointCard = ({
           sx={{ mb: 1 }}
         />
 
-        {/* IP адрес - только для админа */}
+        {/* IP адрес - только для админа (теперь из модели счетчика, с возможностью редактирования) */}
         {showRestrictedFields && (
           <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
             <EnSelect
               id={`ipAddress-${index}`}
               label="IP адрес"
-              options={Array.isArray(ipAddresses) ? ipAddresses.map((ip) => ip.address) : []}
               value={connection.ipAddress}
               onChange={(e) => onFieldChange(index, "ipAddress", e.target.value)}
-              required={true}
-              helperText="Обязательное поле"
+              freeInput={true}
               size="small"
               sx={{ width: 210 }}
             />
@@ -107,7 +104,6 @@ const ConnectionPointCard = ({
               value={connection.port}
               onChange={(e) => onFieldChange(index, "port", e.target.value)}
               freeInput={true}
-              required={true}
               error={validationErrors[`port-${index}`]}
               helperText={validationErrors[`port-${index}`] ? "Только цифры" : "Обязательное поле"}
               size="small"

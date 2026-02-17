@@ -31,7 +31,7 @@ const DeviceTypesManager = () => {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [formData, setFormData] = useState({ name: "", password: "", requests: "", adv_settings: "" });
+  const [formData, setFormData] = useState({ name: "", password: "", ip_address: "", requests: "", adv_settings: "" });
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -53,14 +53,20 @@ const DeviceTypesManager = () => {
   const handleAdd = () => {
     // handleAdd: подготовка формы для добавления новой модели
     setEditItem(null);
-    setFormData({ name: "", password: "", requests: "", adv_settings: "" });
+    setFormData({ name: "", password: "", ip_address: "", requests: "", adv_settings: "" });
     setOpen(true);
   };
 
   const handleEdit = (item) => {
     // handleEdit: открыть форму редактирования и заполнить данными
     setEditItem(item);
-    setFormData({ name: item.name, password: item.password, requests: item.requests || "", adv_settings: item.adv_settings || "" });
+    setFormData({
+      name: item.name,
+      password: item.password,
+      ip_address: item.ip_address || "",
+      requests: item.requests || "",
+      adv_settings: item.adv_settings || "",
+    });
     setOpen(true);
   };
 
@@ -112,6 +118,7 @@ const DeviceTypesManager = () => {
               <TableCell>ID</TableCell>
               <TableCell>Модель</TableCell>
               <TableCell>Пароль</TableCell>
+              <TableCell>IP адрес</TableCell>
               <TableCell>Запросы</TableCell>
               <TableCell sx={{ maxWidth: 200 }}>Доп. параметры</TableCell>
               <TableCell align="right">Действия</TableCell>
@@ -123,8 +130,15 @@ const DeviceTypesManager = () => {
                 <TableCell>{item.id}</TableCell>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>{item.password}</TableCell>
-                <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.requests}</TableCell>
-                <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.adv_settings}</TableCell>
+                <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {item.ip_address}
+                </TableCell>
+                <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {item.requests}
+                </TableCell>
+                <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {item.adv_settings}
+                </TableCell>
                 <TableCell align="right">
                   <IconButton onClick={() => handleEdit(item)} color="primary">
                     <Edit />
@@ -159,6 +173,15 @@ const DeviceTypesManager = () => {
             variant="outlined"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="IP адрес"
+            fullWidth
+            variant="outlined"
+            value={formData.ip_address}
+            onChange={(e) => setFormData({ ...formData, ip_address: e.target.value })}
             sx={{ mb: 2 }}
           />
           <TextField

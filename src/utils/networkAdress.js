@@ -9,11 +9,11 @@ export const calculateNetworkAddress = (deviceModel, serialNumber) => {
 
   // CE серия: все цифры кроме первых 6
   if (["CE 208", "CE 307", "CE 308"].includes(deviceModel)) {
-    return serialNumber.substring(6);
+    return "16";
   }
 
   // Милур серия: последние 4 цифры + 16
-  if (["Милур 107", "Милур 307"].includes(deviceModel)) {
+  if (["Милур-107S (СПОДЭС)", "Милур-307S (СПОДЭС)"].includes(deviceModel)) {
     const lastFour = serialNumber.slice(-4);
     const result = parseInt(lastFour) + 16;
     return result.toString();
