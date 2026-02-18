@@ -7,6 +7,8 @@
 
 # testing
 /coverage
+Для Спарка/
+data/
 
 # production
 /build
