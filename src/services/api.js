@@ -1,7 +1,7 @@
 const getApiBaseUrl = () => {
   // Проверяем localStorage для переопределения URL
   const savedUrl = localStorage.getItem("REACT_APP_API_URL");
-  return savedUrl || process.env.REACT_APP_API_URL || "http://localhost:3001";
+  return savedUrl || process.env.REACT_APP_API_URL || "http://192.168.1.72:18543";
 };
 
 // Получить токен из localStorage

@@ -54,7 +54,7 @@ const Settings = () => {
   const loadCurrentConfig = () => {
     // loadCurrentConfig: инициализация текущей конфигурации API (берется из localStorage или .env)
     const savedUrl = localStorage.getItem("REACT_APP_API_URL");
-    const current = savedUrl || process.env.REACT_APP_API_URL || "http://localhost:3001";
+    const current = savedUrl || process.env.REACT_APP_API_URL || "http://192.168.1.72:18543";
     setCurrentUrl(current);
     setApiUrl(current);
   };
@@ -212,7 +212,7 @@ const Settings = () => {
             label="API URL"
             value={apiUrl}
             onChange={(e) => setApiUrl(e.target.value)}
-            placeholder="http://localhost:3001"
+            placeholder="http://192.168.1.72:18543"
             helperText="Введите базовый URL для API сервера (без /api)"
             sx={{ mb: 3 }}
           />
