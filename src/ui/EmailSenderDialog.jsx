@@ -4,7 +4,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, A
 /**
  * Диалог для отправки файла на email.
  */
-const EmailSenderDialog = ({ open, onClose, email, onEmailChange, onSend, sending, message }) => {
+const EmailSenderDialog = ({ open, onClose, email, onEmailChange, onSend, sending, message, freeinput = true }) => {
   useEffect(() => {
     if (message && message.type === "success") {
       const timer = setTimeout(() => {
@@ -29,6 +29,7 @@ const EmailSenderDialog = ({ open, onClose, email, onEmailChange, onSend, sendin
           onChange={(e) => onEmailChange(e.target.value)}
           placeholder="example@mail.com"
           sx={{ mt: 2 }}
+          disabled={!freeinput}
         />
         {message && message.text && (
           <Alert severity={message.type} sx={{ mt: 1 }}>

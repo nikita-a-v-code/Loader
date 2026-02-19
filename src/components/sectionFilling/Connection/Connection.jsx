@@ -24,16 +24,16 @@ const Connection = ({
   networkData = {},
 }) => {
   const { user } = useAuth();
-  
+
   // Загружаем справочник моделей счетчиков для получения IP адресов
   const [deviceTypes, setDeviceTypes] = useState([]);
-  
+
   useEffect(() => {
     ApiService.getDevices()
       .then(setDeviceTypes)
       .catch((err) => console.error("Error loading device types:", err));
   }, []);
-  
+
   // Хук для управления данными подключения
   const {
     protocols,
@@ -261,6 +261,7 @@ const Connection = ({
           setEmailMessage({ text: "", type: "success" });
         }}
         onSend={handleSendToEmail}
+        freeinput={false}
         sending={emailSending}
         message={emailMessage}
       />

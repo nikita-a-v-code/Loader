@@ -221,7 +221,7 @@ const ExcelFormImporter = () => {
       processedRows = autofillFromDeviceModel(processedRows);
       processedRows = autofillProtocols(processedRows);
       processedRows = autofillTransformerCoefficients(processedRows);
-      
+
       // Скрываем поля для не-админов
       if (!isAdmin) {
         processedRows = processedRows.map((row) => {
@@ -236,13 +236,21 @@ const ExcelFormImporter = () => {
           return filteredRow;
         });
       }
-      
+
       await ApiService.exportToExcel(processedRows);
     } catch (err) {
       console.error("Export error:", err);
       alert("Ошибка при экспорте: " + err.message);
     }
-  }, [rows, validateAllWithOverrides, calculateNetworkAddresses, autofillFromDeviceModel, autofillProtocols, autofillTransformerCoefficients, isAdmin]);
+  }, [
+    rows,
+    validateAllWithOverrides,
+    calculateNetworkAddresses,
+    autofillFromDeviceModel,
+    autofillProtocols,
+    autofillTransformerCoefficients,
+    isAdmin,
+  ]);
 
   /**
    * Подготовка данных для отправки на email.
@@ -400,6 +408,7 @@ const ExcelFormImporter = () => {
         onSend={handleSendToEmail}
         sending={emailSending}
         message={emailMessage}
+        freeinput={false}
       />
     </Box>
   );
