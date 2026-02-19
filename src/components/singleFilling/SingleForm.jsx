@@ -55,8 +55,7 @@ const SingleForm = () => {
    * - deleteCard: удалить карточку
    * - updateCardFormData: обновить данные формы в карточке
    */
-  const { cards, applyDefaults, updateCardFormData, addNewCard, copyCard, deleteCard } =
-    useCardManager(defaults);
+  const { cards, applyDefaults, updateCardFormData, addNewCard, copyCard, deleteCard } = useCardManager(defaults);
 
   // ==================== ЛОКАЛЬНОЕ СОСТОЯНИЕ UI ====================
 
@@ -136,7 +135,6 @@ const SingleForm = () => {
       setEmailMessage({ text: "", type: "success" });
       await sendCardsToEmail(cards, email, user?.id, mpes, rkesOptions, muOptions);
       setEmailMessage({ text: `Файл успешно отправлен на ${email}`, type: "success" });
-      
     } catch (error) {
       console.error("Ошибка при отправке на email:", error);
       setEmailMessage({ text: "Ошибка при отправке на email", type: "error" });
@@ -233,6 +231,7 @@ const SingleForm = () => {
             setEmailMessage({ text: "", type: "success" });
           }}
           onSend={handleSendToEmail}
+          freeinput={false}
           sending={emailSending}
           message={emailMessage}
         />
