@@ -53,28 +53,33 @@ const useCardManager = (defaults) => {
   }, [defaults]);
 
   // Копирование карточки
-  const copyCard = useCallback(
-    (cardIndex) => {
-      const newCardId = Date.now();
+  const copyCard = useCallback((cardIndex) => {
+    const newCardId = Date.now();
 
-      setCards((prev) => {
-        const cardToCopy = prev[cardIndex];
-        const newCard = {
-          id: newCardId,
-          formData: {
-            ...cardToCopy.formData,
-            serialNumber: "",
-            consumerName: cardToCopy.formData.consumerName ? `${cardToCopy.formData.consumerName} ` : "",
-            contractNumber: "",
-          },
-        };
-        const newCards = [...prev];
-        newCards.splice(cardIndex + 1, 0, newCard);
-        return newCards;
-      });
-    },
-    []
-  );
+    setCards((prev) => {
+      const cardToCopy = prev[cardIndex];
+      const newCard = {
+        id: newCardId,
+        formData: {
+          ...cardToCopy.formData,
+          serialNumber: "",
+          consumerName: "",
+          contractNumber: "",
+          simCardShort: "",
+          simCardFull: "",
+          communicatorNumber: "",
+          house: "",
+          building: "",
+          apartment: "",
+          deliveryPoint: "",
+          networkCode: "",
+        },
+      };
+      const newCards = [...prev];
+      newCards.splice(cardIndex + 1, 0, newCard);
+      return newCards;
+    });
+  }, []);
 
   // Удаление карточки
   const deleteCard = useCallback((cardIndex) => {

@@ -52,7 +52,7 @@ const useSingleFormHandlers = ({
       }
 
       // Валидация полей
-      if (fieldName === "house" || fieldName === "apartment") {
+      if (fieldName === "apartment") {
         if (!validateField(value, validators.digits, errorKey)) return;
       }
 
@@ -90,13 +90,13 @@ const useSingleFormHandlers = ({
       // Специальная обработка для typeDevice - обновляем все связанные поля сразу
       if (fieldName === "typeDevice") {
         const selectedDevice = deviceTypes.find((device) => device.name === value);
-        setFormData((prev) => ({ 
-          ...prev, 
+        setFormData((prev) => ({
+          ...prev,
           typeDevice: value,
           password: selectedDevice?.password || prev.password,
           requests: selectedDevice?.requests || "",
           advSettings: selectedDevice?.adv_settings || "",
-          ipAddress: selectedDevice?.ip_address || ""
+          ipAddress: selectedDevice?.ip_address || "",
         }));
         return;
       }

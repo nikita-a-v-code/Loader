@@ -107,8 +107,6 @@ const AddressSection = ({
             value={formData.house}
             onChange={(e) => handleFieldChange("house", e.target.value)}
             freeInput
-            error={validationErrors.house}
-            helperText={validationErrors.house ? validators.digits.message : ""}
           />
         </Box>
 

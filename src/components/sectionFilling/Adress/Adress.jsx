@@ -139,7 +139,7 @@ const Adress = ({
     const errorKey = `${fieldName}-${pointIndex}`;
 
     // Валидация полей
-    if (fieldName === "apartment" || fieldName === "house") {
+    if (fieldName === "apartment") {
       if (!validateFieldWithError(value, validators.digits, errorKey)) return;
     }
 
@@ -346,8 +346,6 @@ const Adress = ({
                   onChange={(e) => handleFieldChange(index, "house", e.target.value)}
                   freeInput={true}
                   required={false}
-                  error={validationErrors[`house-${index}`]}
-                  helperText={validationErrors[`house-${index}`] ? validators.digits.message : ""}
                   sx={{ width: 100 }}
                 />
               </Box>
