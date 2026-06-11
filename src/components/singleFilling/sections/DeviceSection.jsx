@@ -53,6 +53,17 @@ const DeviceSection = ({ formData, handleFieldChange, deviceTypes, validationErr
           value={formData.numberPhases}
           onChange={(e) => handleFieldChange("numberPhases", e.target.value)}
         />
+
+        {/* Идентификатор объекта */}
+        {showRestrictedFields && (
+          <EnSelect
+            label="Идентификатор объекта"
+            value={formData.objectID}
+            onChange={(e) => handleFieldChange("objectID", e.target.value)}
+            helperText="Уникальное значение, автоматически присваивается из базы данных"
+            disabled
+          />
+        )}
         <EnSelect
           label="Дата поверки"
           value={formData.verificationDate}

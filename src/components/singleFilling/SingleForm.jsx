@@ -22,6 +22,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ErrorAlert from "../../ui/ErrorAlert";
 import EmailSenderDialog from "../../ui/EmailSenderDialog";
 import { useAuth } from "../../context/AuthContext";
+import ApiService from "../../services/api";
 import useSingleFormData from "./hooks/useSingleFormData";
 import useCardManager from "./hooks/useCardManager";
 import {
@@ -74,6 +75,9 @@ const SingleForm = () => {
   /** Сообщение о результате отправки email {text, type: 'success'|'error'} */
   const [emailMessage, setEmailMessage] = useState({ text: "", type: "success" });
 
+  /** Флаг включенности режима KE (двойные файлы) */
+  const [keFileModeEnabled, setKeFileModeEnabled] = useState(false);
+
   // ==================== ЭФФЕКТЫ ИНИЦИАЛИЗАЦИИ ====================
 
   /**
@@ -93,6 +97,21 @@ const SingleForm = () => {
     if (defaultEmail) setEmail(defaultEmail);
   }, [defaultEmail]);
 
+  /**
+   * Загружаем параметр keFileModeEnabled из приложения.
+   */
+  useEffect(() => {
+    const loadKeFileMode = async () => {
+      try {
+        const result = await ApiService.getAppSetting("ke_file_mode_enabled");
+        setKeFileModeEnabled(result.value === "true" || result.value === true);
+      } catch (error) {
+        console.error("Ошибка загрузки параметра ke_file_mode_enabled:", error);
+      }
+    };
+    loadKeFileMode();
+  }, []);
+
   // ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
 
   /**
@@ -109,10 +128,12 @@ const SingleForm = () => {
    * Экспорт всех карточек в Excel файл.
    * Для админов: включает порты, сетевые адреса, пароли.
    * Для обычных пользователей: только базовые данные.
+   * Если включен режим KE, создаются два файла.
    */
   const handleExport = async () => {
     try {
-      await exportCardsToExcel(cards, user, mpes, rkesOptions, muOptions);
+      const deviceList = apiData.deviceListFull || [];
+      await exportCardsToExcel(cards, user, mpes, rkesOptions, muOptions, deviceList, keFileModeEnabled);
     } catch (error) {
       console.error("Ошибка при выгрузке в Excel:", error);
       alert("Ошибка при создании Excel файла");
@@ -122,6 +143,7 @@ const SingleForm = () => {
   /**
    * Отправка Excel файла на указанный email.
    * Валидирует email перед отправкой.
+   * Если включен режим KE, отправляются два файла.
    */
   const handleSendToEmail = async () => {
     // Простая валидация email
@@ -133,7 +155,8 @@ const SingleForm = () => {
     try {
       setEmailSending(true);
       setEmailMessage({ text: "", type: "success" });
-      await sendCardsToEmail(cards, email, user?.id, mpes, rkesOptions, muOptions);
+      const deviceList = apiData.deviceListFull || [];
+      await sendCardsToEmail(cards, email, user?.id, mpes, rkesOptions, muOptions, deviceList, keFileModeEnabled);
       setEmailMessage({ text: `Файл успешно отправлен на ${email}`, type: "success" });
     } catch (error) {
       console.error("Ошибка при отправке на email:", error);

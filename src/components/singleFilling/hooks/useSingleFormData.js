@@ -9,7 +9,7 @@ export const initialFormData = {
   s3: "",
   // Адрес
   settlement: "",
-  microdistrict: "",
+  objectID: "",
   street: "",
   house: "",
   building: "",
@@ -101,6 +101,7 @@ const useSingleFormData = () => {
   const [abonentTypes, setAbonentTypes] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
+  const [deviceListFull, setDeviceListFull] = useState([]); // Полный объект устройств с requests_ke
   const [protocols, setProtocols] = useState([]);
   const [defaultEmail, setDefaultEmail] = useState("");
   const [numberTP, setNumberTP] = useState([]);
@@ -128,7 +129,8 @@ const useSingleFormData = () => {
       setSettl(settlData);
       setAbonentTypes(abonentData);
       setStatuses(statusData);
-      setDeviceTypes(deviceData);
+      setDeviceTypes(deviceData); // Полные объекты для использования в форме
+      setDeviceListFull(deviceData); // Полные объекты с requests_ke для экспорта
       setProtocols(protocolData);
       setNumberTP(numberTPData);
 
@@ -236,6 +238,7 @@ const useSingleFormData = () => {
     abonentTypes,
     statuses,
     deviceTypes,
+    deviceListFull,
     protocols,
     numberTP,
     defaults,

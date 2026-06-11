@@ -58,16 +58,6 @@ const AddressSection = ({
           </Box>
         </Box>
 
-        {/* Микрорайон/Квартал */}
-        <Box>
-          <EnSelect
-            label="Микрорайон/Квартал"
-            value={formData.microdistrict}
-            onChange={(e) => handleFieldChange("microdistrict", e.target.value)}
-            freeInput
-          />
-        </Box>
-
         {/* Улица с кнопкой добавления */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1, alignItems: "start", mt: "8px" }}>
           <EnSelect

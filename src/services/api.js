@@ -293,8 +293,18 @@ class ApiService {
     return this.delete(`streets/${id}`);
   }
 
+  /* Метод для получения идентификатора объекта */
+  static async getNextObjectID() {
+    return this.get("objectid");
+  }
+
+  /* Метод для пометки идентификаторов как использованных */
+  static async markObjectIDsAsUsed(objectIDs) {
+    return this.post("objectid/mark-used", { objectIDs });
+  }
+
   /* Метод для выгрузки в Excel */
-  static async exportToExcel(data) {
+  static async exportToExcel(data, filename = null, isKE = false) {
     const url = `${getApiBaseUrl()}/api/excel/export`;
 
     const response = await fetch(url, {
@@ -302,7 +312,7 @@ class ApiService {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ data }),
+      body: JSON.stringify({ data, isKE }),
     });
 
     if (!response.ok) {
@@ -314,7 +324,7 @@ class ApiService {
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `loader_data_${new Date().toISOString().split("T")[0]}.xlsx`;
+    link.download = filename || `loader_data_${new Date().toISOString().split("T")[0]}.xlsx`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -322,8 +332,8 @@ class ApiService {
   }
 
   /* Метод для отправки Excel на email */
-  static async sendExcelToEmail(data, email, userId = null, formType = "loader") {
-    return this.post("excel/send-email", { data, email, userId, formType });
+  static async sendExcelToEmail(data, email, userId = null, formType = "loader", isKE = false) {
+    return this.post("excel/send-email", { data, email, userId, formType, isKE });
   }
 
   /* Настройки */
@@ -420,6 +430,23 @@ class ApiService {
 
   static async createActionLog(data) {
     return this.post("action-logs", data);
+  }
+
+  /* Методы для app_settings */
+  static async getAppSetting(key) {
+    return this.get(`settings/app-setting/${key}`);
+  }
+
+  static async getAllAppSettings() {
+    return this.get("settings/app-settings");
+  }
+
+  static async setAppSetting(key, value) {
+    return this.post("settings/app-setting", { key, value });
+  }
+
+  static async updateAppSetting(key, value) {
+    return this.put(`settings/app-setting/${key}`, { value });
   }
 }
 

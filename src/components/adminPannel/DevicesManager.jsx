@@ -31,7 +31,14 @@ const DeviceTypesManager = () => {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [formData, setFormData] = useState({ name: "", password: "", ip_address: "", requests: "", adv_settings: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    password: "",
+    ip_address: "",
+    requests: "",
+    adv_settings: "",
+    requests_ke: "",
+  });
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -53,7 +60,14 @@ const DeviceTypesManager = () => {
   const handleAdd = () => {
     // handleAdd: подготовка формы для добавления новой модели
     setEditItem(null);
-    setFormData({ name: "", password: "", ip_address: "", requests: "", adv_settings: "" });
+    setFormData({
+      name: "",
+      password: "",
+      ip_address: "",
+      requests: "",
+      adv_settings: "",
+      requests_ke: "",
+    });
     setOpen(true);
   };
 
@@ -66,6 +80,7 @@ const DeviceTypesManager = () => {
       ip_address: item.ip_address || "",
       requests: item.requests || "",
       adv_settings: item.adv_settings || "",
+      requests_ke: item.requests_ke || "",
     });
     setOpen(true);
   };
@@ -120,6 +135,7 @@ const DeviceTypesManager = () => {
               <TableCell>Пароль</TableCell>
               <TableCell>IP адрес</TableCell>
               <TableCell>Запросы</TableCell>
+              <TableCell>Запросы КЭ</TableCell>
               <TableCell sx={{ maxWidth: 200 }}>Доп. параметры</TableCell>
               <TableCell align="right">Действия</TableCell>
             </TableRow>
@@ -135,6 +151,9 @@ const DeviceTypesManager = () => {
                 </TableCell>
                 <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {item.requests}
+                </TableCell>
+                <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {item.requests_ke}
                 </TableCell>
                 <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {item.adv_settings}
@@ -191,6 +210,15 @@ const DeviceTypesManager = () => {
             variant="outlined"
             value={formData.requests}
             onChange={(e) => setFormData({ ...formData, requests: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Запросы КЭ (для кэ-счётчиков)"
+            fullWidth
+            variant="outlined"
+            value={formData.requests_ke}
+            onChange={(e) => setFormData({ ...formData, requests_ke: e.target.value })}
             sx={{ mb: 2 }}
           />
           <TextField

@@ -1,6 +1,7 @@
 import ApiService from "../../../services/api";
 import { calculateNetworkAddress } from "../../../utils/networkAdress";
 import { isRimModelRequiringCommunicator } from "../../../utils/Validation/validationRules";
+import { transformToKe, getKeFilename } from "../utils/keTransformer";
 
 // Список обязательных полей
 export const REQUIRED_FIELDS = [
@@ -138,6 +139,7 @@ export const getExportFormData = (
     delete exportObj.protocol;
     delete exportObj.advSettings;
     delete exportObj.requests;
+    delete exportObj.objectID;
   }
 
   return exportObj;
@@ -171,9 +173,18 @@ export const getExportFormData = (
 // };
 
 // Экспорт карточек в Excel
-export const exportCardsToExcel = async (cards, user, mpes, rkesOptions, muOptions) => {
+export const exportCardsToExcel = async (
+  cards,
+  user,
+  mpes,
+  rkesOptions,
+  muOptions,
+  deviceListFull = [],
+  keFileModeEnabled = false
+) => {
   const isAdmin = user?.role_name === "admin";
   const exportData = [];
+  const objectIDsToMark = [];
 
   for (const card of cards) {
     let exportObj;
@@ -186,14 +197,44 @@ export const exportCardsToExcel = async (cards, user, mpes, rkesOptions, muOptio
       exportObj = getExportFormData(card.formData, mpes, rkesOptions, muOptions, false, false);
     }
     exportData.push(exportObj);
+
+    if (card.formData.objectID) {
+      objectIDsToMark.push(card.formData.objectID);
+    }
   }
 
-  await ApiService.exportToExcel(exportData);
+  if (objectIDsToMark.length > 0) {
+    try {
+      await ApiService.markObjectIDsAsUsed(objectIDsToMark);
+    } catch (error) {
+      console.error("Ошибка при пометке objectID:", error);
+    }
+  }
+
+  const dateStr = new Date().toISOString().split("T")[0];
+  const filename = `loader_data_${dateStr}.xlsx`;
+  await ApiService.exportToExcel(exportData, filename, false);
+
+  if (keFileModeEnabled) {
+    const keExportData = exportData.map((data) => transformToKe(data, deviceListFull));
+    const keFilename = getKeFilename(filename);
+    await ApiService.exportToExcel(keExportData, keFilename, true);
+  }
 };
 
 // Отправка карточек на email
-export const sendCardsToEmail = async (cards, email, userId, mpes, rkesOptions, muOptions) => {
+export const sendCardsToEmail = async (
+  cards,
+  email,
+  userId,
+  mpes,
+  rkesOptions,
+  muOptions,
+  deviceListFull = [],
+  keFileModeEnabled = false
+) => {
   const exportData = [];
+  const objectIDsToMark = [];
 
   for (const card of cards) {
     let exportObj;
@@ -202,7 +243,24 @@ export const sendCardsToEmail = async (cards, email, userId, mpes, rkesOptions, 
       port: card.formData.port,
     };
     exportData.push(exportObj);
+
+    if (card.formData.objectID) {
+      objectIDsToMark.push(card.formData.objectID);
+    }
   }
 
-  await ApiService.sendExcelToEmail(exportData, email, userId, "single_filling");
+  if (objectIDsToMark.length > 0) {
+    try {
+      await ApiService.markObjectIDsAsUsed(objectIDsToMark);
+    } catch (error) {
+      console.error("Ошибка при пометке objectID:", error);
+    }
+  }
+
+  await ApiService.sendExcelToEmail(exportData, email, userId, "single_filling", false);
+
+  if (keFileModeEnabled) {
+    const keExportData = exportData.map((data) => transformToKe(data, deviceListFull));
+    await ApiService.sendExcelToEmail(keExportData, email, userId, "single_filling_ke", true);
+  }
 };

@@ -21,6 +21,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { Save, Refresh, Add, Edit, Delete } from "@mui/icons-material";
 import ConnectionManager from "./ConnectionsManager";
@@ -46,9 +48,14 @@ const Settings = () => {
   const [editItem, setEditItem] = useState(null);
   const [emailForm, setEmailForm] = useState({ email: "" });
 
+  // Состояние для функции двойного файла с кэ-счётчиками
+  const [keFileMode, setKeFileMode] = useState(false);
+  const [keFileModeLoading, setKeFileModeLoading] = useState(false);
+
   useEffect(() => {
     loadCurrentConfig();
     loadEmails();
+    loadKeFileModeSetting();
   }, []);
 
   const loadCurrentConfig = () => {
@@ -172,6 +179,32 @@ const Settings = () => {
   };
 
   const defaultEmail = emails.find((e) => e.is_default)?.email || "";
+
+  const loadKeFileModeSetting = async () => {
+    try {
+      const result = await ApiService.getAppSetting("ke_file_mode_enabled");
+      setKeFileMode(result.value === "true" || result.value === true);
+    } catch (error) {
+      console.error("Ошибка загрузки параметра ke_file_mode_enabled:", error);
+    }
+  };
+
+  const handleKeFileModeToggle = async () => {
+    try {
+      setKeFileModeLoading(true);
+      const newValue = !keFileMode;
+      await ApiService.setAppSetting("ke_file_mode_enabled", String(newValue));
+      setKeFileMode(newValue);
+      setMessage("Настройка сохранена успешно");
+      setMessageType("success");
+    } catch (error) {
+      console.error("Ошибка сохранения параметра ke_file_mode_enabled:", error);
+      setMessage("Ошибка при сохранении параметра");
+      setMessageType("error");
+    } finally {
+      setKeFileModeLoading(false);
+    }
+  };
 
   const testConnection = async () => {
     // testConnection: делает HTTP запрос к указанному API URL и показывает результат
@@ -305,7 +338,24 @@ const Settings = () => {
           )}
         </CardContent>
       </Card>
-      <Card>
+
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Функция двойного файла с кэ-счётчиками
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            При включении этой функции при выгрузке/отправке данных будут формироваться 2 Excel файла: первый - обычный,
+            второй - с заводскими номерами счётчиков с префиксом "кэ-" и альтернативными запросами
+          </Typography>
+          <FormControlLabel
+            control={<Switch checked={keFileMode} onChange={handleKeFileModeToggle} disabled={keFileModeLoading} />}
+            label="Создавать двойные файлы (кэ-счётчики)"
+          />
+        </CardContent>
+      </Card>
+
+      <Card sx={{ mb: 3 }}>
         <CardContent>
           <ConnectionManager />
         </CardContent>

@@ -286,7 +286,7 @@ const Adress = ({
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
                 <EnSelect
                   id={`microdistrict-${index}`}
-                  label="Микрорайон/Квартал"
+                  label="Идентификатор объекта"
                   value={point.microdistrict}
                   onChange={(e) => handleFieldChange(index, "microdistrict", e.target.value)}
                   freeInput={true}

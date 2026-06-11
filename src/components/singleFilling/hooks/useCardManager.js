@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import ApiService from "../../../services/api";
 import { initialFormData } from "./useSingleFormData";
 
@@ -6,7 +6,24 @@ import { initialFormData } from "./useSingleFormData";
 const useCardManager = (defaults) => {
   const [cards, setCards] = useState([{ id: Date.now(), formData: { ...initialFormData } }]);
 
-  // Применение дефолтных значений к первой карточке
+  useEffect(() => {
+    const initFirstCard = async () => {
+      try {
+        const response = await ApiService.getNextObjectID();
+        if (response.objectID) {
+          setCards((prev) =>
+            prev.map((card, index) =>
+              index === 0 ? { ...card, formData: { ...card.formData, objectID: response.objectID } } : card
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Ошибка получения objectID:", error);
+      }
+    };
+    initFirstCard();
+  }, []);
+
   const applyDefaults = useCallback(() => {
     if (defaults.protocol) {
       setCards((prev) =>
@@ -25,7 +42,6 @@ const useCardManager = (defaults) => {
     }
   }, [defaults]);
 
-  // Обновление formData для конкретной карточки
   const updateCardFormData = useCallback((cardId, updater) => {
     setCards((prev) =>
       prev.map((card) =>
@@ -36,9 +52,17 @@ const useCardManager = (defaults) => {
     );
   }, []);
 
-  // Добавление новой пустой карточки с дефолтными значениями
-  const addNewCard = useCallback(() => {
+  const addNewCard = useCallback(async () => {
     const newCardId = Date.now();
+
+    let objectID = "";
+
+    try {
+      const response = await ApiService.getNextObjectID();
+      objectID = response.objectID || "";
+    } catch (error) {
+      console.error("Ошибка получения objectID:", error);
+    }
 
     const newCard = {
       id: newCardId,
@@ -46,22 +70,31 @@ const useCardManager = (defaults) => {
         ...initialFormData,
         // Применяем дефолтный протокол из справочников
         protocol: defaults.protocol || "",
+        objectID,
       },
     };
 
     setCards((prev) => [...prev, newCard]);
   }, [defaults]);
 
-  // Копирование карточки
-  const copyCard = useCallback((cardIndex) => {
+  const copyCard = useCallback(async (cardIndex) => {
     const newCardId = Date.now();
+
+    let newObjectID = "";
+    try {
+      const response = await ApiService.getNextObjectID();
+      newObjectID = response.objectID || "";
+    } catch (error) {
+      console.error("Ошибка получения objectID:", error);
+    }
 
     setCards((prev) => {
       const cardToCopy = prev[cardIndex];
+      const { objectID: oldObjectID, ...restFormData } = cardToCopy.formData;
       const newCard = {
         id: newCardId,
         formData: {
-          ...cardToCopy.formData,
+          ...restFormData,
           serialNumber: "",
           consumerName: "",
           contractNumber: "",
@@ -73,6 +106,7 @@ const useCardManager = (defaults) => {
           apartment: "",
           deliveryPoint: "",
           networkCode: "",
+          objectID: newObjectID,
         },
       };
       const newCards = [...prev];
@@ -81,7 +115,6 @@ const useCardManager = (defaults) => {
     });
   }, []);
 
-  // Удаление карточки
   const deleteCard = useCallback((cardIndex) => {
     setCards((prev) => prev.filter((_, index) => index !== cardIndex));
   }, []);
