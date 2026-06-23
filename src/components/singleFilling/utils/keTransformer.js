@@ -1,9 +1,13 @@
 /**
- * Утилита для трансформации данных в KE версию
- * KE версия содержит:
- * - Заводские номера с префиксом "кэ-"
- * - Альтернативные запросы (requests_ke)
+ * keTransformer - утилита для трансформации данных в KE версию
+ * 
+ * KE версия предназначена для систем с ключевым элементом (КЭ)
+ * Отличия от обычной версии:
+ * - Заводской номер с префиксом "кэ-"
+ * - Альтернативные запросы (requests_ke) вместо обычных запросов
+ * - objectID отсутствует (счетчики с КЭ не используют идентификаторы)
  */
+import { transformToKe as transformToKeUtil } from "../utils/keTransformer";
 
 /**
  * Трансформирует один объект данных в KE версию
@@ -54,3 +58,5 @@ export const getKeFilename = (originalFilename) => {
   const ext = parts.pop();
   return `${parts.join(".")}_KE.${ext}`;
 };
+
+export default { transformToKe, transformToKeArray, getKeFilename };

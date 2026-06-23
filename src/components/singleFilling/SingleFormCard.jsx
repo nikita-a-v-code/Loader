@@ -1,3 +1,14 @@
+/**
+ * SingleFormCard - компонент одной карточки формы
+ *
+ * Представляет собой карточку с разворачивающимися секциями для заполнения данных о потребителе:
+ * Управляет:
+ * - Состоянием карточки (развернута/свернута)
+ * - Валидацией обязательных полей
+ * - Цветовой индикацией состояния (зеленый/серый)
+ * - Созданием новых объектов (населенный пункт, улица, ТП)
+ * - Обработкой событий копирования/удаления
+ */
 import * as React from "react";
 import { useState, useEffect, useCallback } from "react";
 import Box from "@mui/material/Box";
@@ -21,6 +32,19 @@ import TransformSection from "./sections/TransformSection";
 import ConnectionSection from "./sections/ConnectionSection";
 import ApiService from "../../services/api";
 
+/**
+ * Компонент SingleFormCard
+ *
+ * @param {Object} props - свойства компонента
+ * @param {number} props.cardIndex - индекс карточки в массиве
+ * @param {Object} props.formData - текущие данные формы
+ * @param {Function} props.setFormData - функция для обновления данных формы
+ * @param {Function} props.onDelete - callback при удалении карточки
+ * @param {Function} props.onCopy - callback при копировании карточки
+ * @param {boolean} props.canDelete - можно ли удалить карточку (последнюю нельзя)
+ * @param {Object} props.apiData - справочные данные из API
+ * @param {Function} props.onSuccessMessage - callback при успешном действии
+ */
 const SingleFormCard = ({
   cardIndex,
   formData,
@@ -35,6 +59,15 @@ const SingleFormCard = ({
   const [expanded, setExpanded] = useState(true);
   const [errorMessages, setErrorMessages] = useState({});
 
+  /**
+   * Деструктуризация apiData для доступа к справочникам
+   * - mpes, rkesOptions, muOptions: иерархия структуры организации
+   * - settl, str: населенные пункты и улицы
+   * - deviceTypes: модели счетчиков
+   * - protocols: протоколы связи
+   * - numberTP: номера трансформаторных подстанций
+   * - addSettlement, addStreet, addNumberTp: функции добавления новых элементов
+   */
   const {
     mpes,
     rkesOptions,
@@ -54,6 +87,12 @@ const SingleFormCard = ({
     addStreet,
   } = apiData;
 
+  /**
+   * Хук для обработки изменений в форме
+   * - validationErrors: объект с ошибками валидации
+   * - handleFieldChange: функция для изменения значений полей
+   * - getRkesOptions, getMuOptions, getStreetsForSettlement: функции для получения опций
+   */
   const { validationErrors, handleFieldChange, getRkesOptions, getMuOptions, getStreetsForSettlement } =
     useSingleFormHandlers({
       formData,
@@ -70,7 +109,12 @@ const SingleFormCard = ({
       setErrorMessages,
     });
 
-  // Расчет итогового коэффициента
+  // ==================== ЭФФЕКТЫ ====================
+
+  /**
+   * Автоматический расчет итогового коэффициента (ttCoeff * tnCoeff)
+   * Обновляется при изменении коэффициентов ТТ или ТН
+   */
   useEffect(() => {
     const ttCoeffNum = parseFloat(formData.ttCoeff) || 1;
     const tnCoeffNum = parseFloat(formData.tnCoeff) || 1;
@@ -80,14 +124,24 @@ const SingleFormCard = ({
     }
   }, [formData.ttCoeff, formData.tnCoeff, formData.finalCoeff, setFormData]);
 
-  // Вычисление сетевого адреса
+  /**
+   * Вычисление сетевого адреса на основе модели счетчика и серийного номера
+   * Используется в секции соединения для автоматической подстановки
+   */
   const getNetworkAddress = useCallback(() => {
     return calculateNetworkAddress(formData.typeDevice, formData.serialNumber);
   }, [formData.typeDevice, formData.serialNumber]);
 
-  // Функция для создания нового населенного пункта
+  // ==================== ФУНКЦИИ ДЛЯ СОЗДАНИЯ СПРАОЧНИКОВ ====================
+
+  /**
+   * Создание нового населенного пункта
+   * @param {string} name - название населенного пункта
+   * @returns {Promise<Object>} - созданный объект населенного пункта
+   */
   const createNewSettlement = async (name) => {
     try {
+      // Отправляем запрос на создание с указанием пользователя (для аудита)
       const newSettlement = await ApiService.createSettlement({ name, userId: user?.id });
       addSettlement(newSettlement);
       onSuccessMessage(`Населенный пункт "${name}" успешно создан, выберите его из списка`);
@@ -101,12 +155,19 @@ const SingleFormCard = ({
     }
   };
 
-  // Функция для создания новой улицы
+  /**
+   * Создание новой улицы в населенном пункте
+   * @param {string} name - название улицы
+   * @param {string} settlementName - название населенного пункта
+   * @returns {Promise<Object>} - созданный объект улицы
+   */
   const createNewStreet = async (name, settlementName) => {
+    // Прверяем, выбран ли населенный пункт для новой улицы, чтобы не улетел пустой запрос на сервер
     const selectedSettlement = settl.find((s) => s.name === settlementName);
     if (!selectedSettlement) return null;
 
     try {
+      // Отправляем запрос на создание улицы с указанием ID населенного пункта и пользователя
       const newStreet = await ApiService.createStreet({ name, settlement_id: selectedSettlement.id, userId: user?.id });
       addStreet(selectedSettlement.id, newStreet);
       onSuccessMessage(`Улица "${name}" успешно создана, выберите ее из списка`);
@@ -120,13 +181,18 @@ const SingleFormCard = ({
     }
   };
 
-  // Функция для создания новой ТП
+  /**
+   * Создание новой трансформаторной подстанции
+   * @param {string} name - название ТП
+   * @returns {Promise<Object>} - созданный объект ТП
+   */
   const createNumberTp = async (name) => {
     try {
-      const newNumberTp = await ApiService.createNumberTP({ 
-        name, 
+      // Отправляем запрос на создание с указанием пользователя и источника (single_filling)
+      const newNumberTp = await ApiService.createNumberTP({
+        name,
         userId: user?.id,
-        source: "single_filling"
+        source: "single_filling",
       });
       addNumberTp(newNumberTp);
       onSuccessMessage(`Трансформаторная подстанция "${name}" успешно создана, выберите ее из списка`);
@@ -140,7 +206,22 @@ const SingleFormCard = ({
     }
   };
 
-  // Проверка обязательных полей
+  // ==================== ВАЛИДАЦИЯ ====================
+
+  /**
+   * Проверка заполненности всех обязательных полей в карточке
+   *
+   * Обязательные поля:
+   * - Структура: s1, s2, s3
+   * - Адрес: settlement, street
+   * - Потребитель: consumerName, subscriberType, accountStatus
+   * - Прибор учета: typeDevice, serialNumber, password
+   * - Сетевой код: transformerSubstationNumber
+   * - Коэффициенты: ttCoeff, tnCoeff
+   * - Соединение: ipAddress, protocol, simCardShort or simCardFull,
+   *
+   * @returns {boolean} - true если все поля заполнены
+   */
   const checkRequiredFields = () => {
     const required = [
       formData.s1,
@@ -166,12 +247,24 @@ const SingleFormCard = ({
 
   const allRequiredFilled = checkRequiredFields();
 
-  // Получение краткого названия карточки
+  // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
+  /**
+   * Получение краткого названия карточки для заголовка
+   * Приоритет:
+   * 1. Название потребителя (если заполнено)
+   * 2. Адрес (населенный пункт, улица)
+   * 3. Номер карточки (по умолчанию)
+   *
+   * @returns {string} - краткое название карточки
+   */
   const getCardTitle = () => {
     if (formData.consumerName) return formData.consumerName;
     if (formData.settlement && formData.street) return `${formData.settlement}, ${formData.street}`;
     return `Карточка ${cardIndex + 1}`;
   };
+
+  // ==================== РЕНДЕРИНГ ====================
 
   return (
     <Box
@@ -183,7 +276,7 @@ const SingleFormCard = ({
         overflow: "hidden",
       }}
     >
-      {/* Заголовок карточки */}
+      {/* ===== ЗАГОЛОВОК КАРТОЧКИ ===== */}
       <Box
         sx={{
           display: "flex",
@@ -199,6 +292,11 @@ const SingleFormCard = ({
           <Typography variant="h6" sx={{ fontWeight: "bold" }}>
             {getCardTitle()}
           </Typography>
+          {/* 
+            Chip показывает статус заполнения
+            - Зеленый "Заполнено" если все обязательные поля заполнены
+            - Серый "Не заполнено" если есть пустые поля
+          */}
           <Chip
             label={allRequiredFilled ? "Заполнено" : "Не заполнено"}
             color={allRequiredFilled ? "success" : "default"}
@@ -206,6 +304,7 @@ const SingleFormCard = ({
           />
         </Box>
         <Box sx={{ display: "flex", alignItems: "center" }}>
+          {/* Кнопка копирования карточки */}
           <IconButton
             onClick={(e) => {
               e.stopPropagation();
@@ -216,6 +315,7 @@ const SingleFormCard = ({
           >
             <ContentCopyIcon />
           </IconButton>
+          {/* Кнопка удаления карточки (если не последняя) */}
           {canDelete && (
             <IconButton
               onClick={(e) => {
@@ -229,13 +329,15 @@ const SingleFormCard = ({
               <DeleteIcon />
             </IconButton>
           )}
+          {/* Кнопка разворачивания/сворачивания карточки */}
           <IconButton size="small">{expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}</IconButton>
         </Box>
       </Box>
 
-      {/* Содержимое карточки */}
+      {/* ===== СОДЕРЖИМОЕ КАРТОЧКИ ===== */}
       <Collapse in={expanded}>
         <Box sx={{ p: 3 }}>
+          {/* Секция структуры организации */}
           <StructureSection
             formData={formData}
             handleFieldChange={handleFieldChange}
@@ -244,6 +346,7 @@ const SingleFormCard = ({
             getMuOptions={getMuOptions}
           />
 
+          {/* Секция адреса */}
           <AddressSection
             formData={formData}
             handleFieldChange={handleFieldChange}
@@ -254,6 +357,7 @@ const SingleFormCard = ({
             validationErrors={validationErrors}
           />
 
+          {/* Секция потребителя */}
           <ConsumerSection
             formData={formData}
             handleFieldChange={handleFieldChange}
@@ -261,6 +365,7 @@ const SingleFormCard = ({
             statuses={statuses}
           />
 
+          {/* Секция сетевого кода */}
           <NetworkSection
             formData={formData}
             handleFieldChange={handleFieldChange}
@@ -270,6 +375,7 @@ const SingleFormCard = ({
             createNumberTp={createNumberTp}
           />
 
+          {/* Секция прибора учета (счетчик) */}
           <DeviceSection
             formData={formData}
             handleFieldChange={handleFieldChange}
@@ -277,8 +383,10 @@ const SingleFormCard = ({
             validationErrors={validationErrors}
           />
 
+          {/* Секция трансформаторов */}
           <TransformSection formData={formData} handleFieldChange={handleFieldChange} />
 
+          {/* Секция соединения */}
           <ConnectionSection
             formData={formData}
             handleFieldChange={handleFieldChange}

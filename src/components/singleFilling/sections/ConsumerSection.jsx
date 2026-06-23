@@ -1,8 +1,27 @@
+/**
+ * ConsumerSection - секция формы для заполнения данных о потребителе
+ * 
+ * Содержит поля:
+ * - Наименование потребителя (обязательное)
+ * - Наименование точки поставки
+ * - Номер договора (лицевой счет)
+ * - Тип абонента (выбор из справочника, обязательное)
+ * - Статус счета (выбор из справочника, обязательное)
+ */
 import React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import EnSelect from "../../../ui/EnSelect/EnSelect";
 
+/**
+ * Компонент ConsumerSection
+ * 
+ * @param {Object} props - свойства компонента
+ * @param {Object} props.formData - текущие данные формы
+ * @param {Function} props.handleFieldChange - функция для обновления полей формы
+ * @param {Array} props.abonentTypes - массив типов абонентов
+ * @param {Array} props.statuses - массив статусов счета
+ */
 const ConsumerSection = ({ formData, handleFieldChange, abonentTypes, statuses }) => {
   return (
     <Box sx={{ mb: 4, p: 3, border: 1, borderColor: "grey.300", borderRadius: 2 }}>
@@ -10,6 +29,7 @@ const ConsumerSection = ({ formData, handleFieldChange, abonentTypes, statuses }
         Потребитель
       </Typography>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 2 }}>
+        {/* Наименование потребителя - обязательное поле */}
         <EnSelect
           label="Наименование потребителя"
           value={formData.consumerName}
@@ -26,18 +46,21 @@ const ConsumerSection = ({ formData, handleFieldChange, abonentTypes, statuses }
             },
           }}
         />
+        {/* Наименование точки поставки */}
         <EnSelect
           label="Наименование точки поставки"
           value={formData.deliveryPoint}
           onChange={(e) => handleFieldChange("deliveryPoint", e.target.value)}
           freeInput
         />
+        {/* Номер договора (лицевой счет) */}
         <EnSelect
           label="Номер договора (лицевой счет)"
           value={formData.contractNumber}
           onChange={(e) => handleFieldChange("contractNumber", e.target.value)}
           freeInput
         />
+        {/* Тип абонента - выбор из справочника, обязательное */}
         <EnSelect
           label="Тип абонента"
           options={abonentTypes.map((item) => item.name)}
@@ -54,6 +77,7 @@ const ConsumerSection = ({ formData, handleFieldChange, abonentTypes, statuses }
             },
           }}
         />
+        {/* Статус счета - выбор из справочника, обязательное */}
         <EnSelect
           label="Статус счета"
           options={statuses.map((item) => item.name)}

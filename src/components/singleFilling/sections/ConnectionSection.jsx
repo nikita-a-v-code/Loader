@@ -1,3 +1,21 @@
+/**
+ * ConnectionSection - секция формы для заполнения параметров подключения
+ * 
+ * Содержит поля:
+ * - Опрос через УСПД (переключатель)
+ * - IP адрес (админ)
+ * - Порт (админ)
+ * - Сетевой адрес (автоматически рассчитывается, заблокирован)
+ * - Номер сим карты (короткий/полный)
+ * - Коэффициент итоговый (автоматически рассчитывается)
+ * - Протокол (админ)
+ * - Номер коммуникатора (обязательный для РиМ)
+ * - Номера ком портов
+ * - Дополнительные параметры (админ)
+ * - Наименование соединения
+ * - Запросы (админ)
+ * - Поля УСПД: наименование, тип, серийный номер, пользователь, пароль
+ */
 import React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -9,6 +27,18 @@ import { validators } from "../../../utils/Validation/Validation";
 import { useAuth } from "../../../context/AuthContext";
 import { isRimModelRequiringCommunicator } from "../../../utils/Validation/validationRules";
 
+/**
+ * Компонент ConnectionSection
+ * 
+ * @param {Object} props - свойства компонента
+ * @param {Object} props.formData - текущие данные формы
+ * @param {Function} props.handleFieldChange - функция для обновления полей формы
+ * @param {Array} props.protocols - массив протоколов
+ * @param {Array} props.deviceTypes - массив моделей счетчиков
+ * @param {Function} props.getNetworkAddress - функция для получения сетевого адреса
+ * @param {Object} props.validationErrors - объект с ошибками валидации
+ * @param {Object} props.errorMessages - объект с сообщениями об ошибках
+ */
 const ConnectionSection = ({
   formData,
   handleFieldChange,
@@ -28,6 +58,7 @@ const ConnectionSection = ({
         Параметры подключения
       </Typography>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 2 }}>
+        {/* Переключатель опроса через УСПД */}
         <FormControlLabel
           control={
             <Switch
@@ -43,6 +74,7 @@ const ConnectionSection = ({
           }
           sx={{ gridColumn: "1 / -1", mb: 2 }}
         />
+        {/* IP адрес - только для админов */}
         {showRestrictedFields && (
           <EnSelect
             label="IP адрес"
@@ -51,6 +83,7 @@ const ConnectionSection = ({
             freeInput
           />
         )}
+        {/* Порт - только для админов */}
         {showRestrictedFields && (
           <EnSelect
             label="Порт"
@@ -69,6 +102,11 @@ const ConnectionSection = ({
             }}
           />
         )}
+        {/* 
+          Сетевой адрес - автоматически рассчитывается
+          - Заблокирован для редактирования
+          - Использует модель счетчика и серийный номер
+        */}
         {showRestrictedFields && (
           <EnSelect
             label="Сетевой адрес"
@@ -86,6 +124,7 @@ const ConnectionSection = ({
             }}
           />
         )}
+        {/* Номер сим карты (короткий) - обязательное поле */}
         <EnSelect
           label="Номер сим карты (короткий)"
           value={formData.simCardShort}
@@ -103,6 +142,7 @@ const ConnectionSection = ({
             },
           }}
         />
+        {/* Номер сим карты (полный) - обязательное поле */}
         <EnSelect
           label="Номер сим карты (полный)"
           value={formData.simCardFull}
@@ -120,6 +160,7 @@ const ConnectionSection = ({
             },
           }}
         />
+        {/* Коэффициент итоговый - автоматически рассчитывается, заблокирован */}
         <TextField
           label="Коэффициент итоговый (не редактируемый)"
           value={formData.finalCoeff}
@@ -134,6 +175,7 @@ const ConnectionSection = ({
             },
           }}
         />
+        {/* Протокол - только для админов, обязательное */}
         {showRestrictedFields && (
           <EnSelect
             label="Протокол"
@@ -152,6 +194,11 @@ const ConnectionSection = ({
             }}
           />
         )}
+        {/* 
+          Номер коммуникатора
+          - Обязательный для счетчиков РиМ
+          - Валидация формата для всех
+        */}
         <EnSelect
           label={isRimModel ? "Номер коммуникатора (для РиМ) *" : "Номер коммуникатора (для РиМ)"}
           value={formData.communicatorNumber}
@@ -179,6 +226,7 @@ const ConnectionSection = ({
               : {}
           }
         />
+        {/* Номера ком портов */}
         <EnSelect
           label="Номера ком портов"
           value={formData.comPorts}
@@ -186,6 +234,7 @@ const ConnectionSection = ({
           freeInput
           helperText="Через запятую: 3,4,5"
         />
+        {/* Дополнительные параметры - только для админов, обязательное */}
         {showRestrictedFields && (
           <EnSelect
             label="Дополнительные параметры"
@@ -204,12 +253,14 @@ const ConnectionSection = ({
             }}
           />
         )}
+        {/* Наименование соединения */}
         <EnSelect
           label="Наименование соединения"
           value={formData.nameConnection}
           onChange={(e) => handleFieldChange("nameConnection", e.target.value)}
           freeInput
         />
+        {/* Запросы - только для админов, обязательное */}
         {showRestrictedFields && (
           <EnSelect
             label="Запросы"
@@ -228,6 +279,10 @@ const ConnectionSection = ({
             }}
           />
         )}
+        {/* 
+          Секция УСПД показывается только если showUSPD === true
+          - Наименование, тип, серийный номер, пользователь, пароль
+        */}
         {formData.showUSPD && (
           <>
             <EnSelect

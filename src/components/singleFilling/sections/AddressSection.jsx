@@ -1,3 +1,18 @@
+/**
+ * AddressSection - секция формы для заполнения адреса точки учета
+ * 
+ * Содержит поля:
+ * - Населенный пункт (выбор или создание нового)
+ * - Улица (выбор или создание нового)
+ * - Дом
+ * - Корпус (литера) - только заглавные буквы
+ * - Квартира (офис) - только цифры
+ * 
+ * Возможности:
+ * - Добавление новых населенных пунктов через кнопку
+ * - Добавление новых улиц через кнопку
+ * - Валидация формата полей (буквы, цифры)
+ */
 import React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -5,6 +20,18 @@ import EnSelect from "../../../ui/EnSelect/EnSelect";
 import { validators } from "../../../utils/Validation/Validation";
 import AddNewElement from "../../../ui/Buttons/AddNewElement";
 
+/**
+ * Компонент AddressSection
+ * 
+ * @param {Object} props - свойства компонента
+ * @param {Object} props.formData - текущие данные формы
+ * @param {Function} props.handleFieldChange - функция для обновления полей формы
+ * @param {Array} props.settl - массив населенных пунктов
+ * @param {Function} props.getStreetsForSettlement - функция получения улиц
+ * @param {Function} props.createNewSettlement - функция создания нового населенного пункта
+ * @param {Function} props.createNewStreet - функция создания новой улицы
+ * @param {Object} props.validationErrors - объект с ошибками валидации
+ */
 const AddressSection = ({
   formData,
   handleFieldChange,
@@ -27,7 +54,11 @@ const AddressSection = ({
           alignItems: "stretch",
         }}
       >
-        {/* Населенный пункт с кнопкой добавления */}
+        {/* 
+          Населенный пункт с кнопкой добавления
+          - Выбор из списка или создание нового
+          - Обязательное поле
+        */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1, alignItems: "start", mt: "8px" }}>
           <EnSelect
             label="Населенный пункт"
@@ -58,7 +89,12 @@ const AddressSection = ({
           </Box>
         </Box>
 
-        {/* Улица с кнопкой добавления */}
+        {/* 
+          Улица с кнопкой добавления
+          - Доступна только после выбора населенного пункта
+          - Выбор из списка или создание нового
+          - Обязательное поле
+        */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1, alignItems: "start", mt: "8px" }}>
           <EnSelect
             label="Улица"
@@ -90,7 +126,7 @@ const AddressSection = ({
           </Box>
         </Box>
 
-        {/* Дом */}
+        {/* Номер дома - свободный ввод */}
         <Box>
           <EnSelect
             label="Дом"
@@ -100,7 +136,11 @@ const AddressSection = ({
           />
         </Box>
 
-        {/* Корпус (литера) */}
+        {/* 
+          Корпус (литера) - только заглавные буквы
+          - Валидация формата
+          - Подсказка при ошибке
+        */}
         <Box>
           <EnSelect
             label="Корпус (литера)"
@@ -112,7 +152,11 @@ const AddressSection = ({
           />
         </Box>
 
-        {/* Квартира (офис) */}
+        {/* 
+          Квартира (офис) - только цифры
+          - Валидация формата
+          - Подсказка при ошибке
+        */}
         <Box>
           <EnSelect
             label="Квартира (офис)"
