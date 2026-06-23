@@ -1,4 +1,5 @@
 import * as React from "react";
+import useState from "react";
 import Box from "@mui/material/Box";
 import CssBaseline from "@mui/material/CssBaseline";
 import Stepper from "@mui/material/Stepper";
@@ -14,7 +15,7 @@ import Consumer from "../../components/sectionFilling/Consumer/Consumer";
 import NetworkCode from "../../components/sectionFilling/NetworkCode/NetworkCode";
 import Device from "../../components/sectionFilling/Device/Device";
 import TTandTN from "../../components/sectionFilling/TTandTN/TTandTN";
-import Connection from "../../components/sectionFilling/Connection/Connection";
+import SectionFillingExporter from "../../components/sectionFilling/SectionFillingExporter";
 
 const SectionFilling = () => {
   /* Строка, определяющая какой компонент сейчас отображается */
@@ -174,7 +175,7 @@ const SectionFilling = () => {
               consumerData={consumerData}
             />
           ) : (
-            <Connection
+            <SectionFillingExporter
               onNext={() => {
                 setContent("xxxx");
                 setCurrentStep(8);

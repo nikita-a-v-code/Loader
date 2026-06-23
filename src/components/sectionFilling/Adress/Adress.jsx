@@ -104,7 +104,6 @@ const Adress = ({
     for (let i = 0; i < pointsCount; i++) {
       points.push({
         settlement: addressData[i]?.settlement || "",
-        microdistrict: addressData[i]?.microdistrict || "",
         street: addressData[i]?.street || "",
         house: addressData[i]?.house || "",
         building: addressData[i]?.building || "",
@@ -280,27 +279,6 @@ const Adress = ({
                     totalPoints={addressPoints.length}
                   />
                 </Box>
-              </Box>
-
-              {/* Поле для ввода микрорайона/квартала */}
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <EnSelect
-                  id={`microdistrict-${index}`}
-                  label="Идентификатор объекта"
-                  value={point.microdistrict}
-                  onChange={(e) => handleFieldChange(index, "microdistrict", e.target.value)}
-                  freeInput={true}
-                  required={false}
-                  sx={{ width: 250 }}
-                />
-                <CopyButtons
-                  pointsCount={pointsCount}
-                  index={index}
-                  fieldValue={point.microdistrict}
-                  onApplyToAll={() => applyToAll(index, "microdistrict")}
-                  onApplyToNext={() => applyToNext(index, "microdistrict")}
-                  totalPoints={addressPoints.length}
-                />
               </Box>
 
               {/* Поле для выбора улицы в зависимости от выбранного населенного пункта */}

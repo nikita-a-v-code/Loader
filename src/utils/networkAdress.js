@@ -29,13 +29,14 @@ export const calculateNetworkAddress = (deviceModel, serialNumber) => {
     return "0";
   }
 
-  // Меркурий серия: 2 последние цифры + логика с +10
+  // Меркурий серия: последние 4 цифры
   if (deviceModel.includes("Меркурий")) {
-    let lastTwo = parseInt(serialNumber.slice(-2));
-    while (lastTwo < 17) {
-      lastTwo += 10;
-    }
-    return lastTwo.toString();
+    // let lastTwo = parseInt(serialNumber.slice(-2));
+    // while (lastTwo < 17) {
+    //   lastTwo += 10;
+    // }
+    // return lastTwo.toString();
+    return serialNumber.slice(-4);
   }
 
   return "";

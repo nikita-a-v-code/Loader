@@ -28,6 +28,58 @@ const Device = ({
     loadDeviceTypes();
   }, []);
 
+  // Синхронизируем devicePoints с deviceData при изменении pointsCount или deviceData
+  useEffect(() => {
+    const device = [];
+    for (let i = 0; i < pointsCount; i++) {
+      device.push({
+        typeDevice: deviceData[i]?.typeDevice || "",
+        serialNumber: deviceData[i]?.serialNumber || "",
+        objectID: deviceData[i]?.objectID || "",
+        verificationDate: deviceData[i]?.verificationDate || "",
+        verificationInterval: deviceData[i]?.verificationInterval || "",
+        dateInstallation: deviceData[i]?.dateInstallation || "",
+        numberTerminal: deviceData[i]?.numberTerminal || "",
+        numberCasing: deviceData[i]?.numberCasing || "",
+        password: deviceData[i]?.password || "",
+        note: deviceData[i]?.note || "",
+      });
+    }
+    setDevicePoints(device);
+  }, [pointsCount, deviceData]);
+
+  // Загружаем objectID для каждой точки учета, если они не заданы
+  useEffect(() => {
+    const loadObjectIDs = async () => {
+      const updatedPoints = [...devicePoints];
+      let hasUpdates = false;
+
+      for (let i = 0; i < updatedPoints.length; i++) {
+        if (!updatedPoints[i].objectID) {
+          try {
+            const response = await ApiService.getNextObjectID();
+            if (response.objectID) {
+              updatedPoints[i].objectID = response.objectID;
+              hasUpdates = true;
+            }
+          } catch (error) {
+            console.error(`Ошибка получения objectID для точки ${i}:`, error);
+          }
+        }
+      }
+
+      if (hasUpdates) {
+        setDevicePoints(updatedPoints);
+        onDeviceChange(updatedPoints);
+      }
+    };
+
+    // Загружаем objectID только если есть точки без objectID
+    if (devicePoints.length > 0 && devicePoints.some((p) => !p.objectID)) {
+      loadObjectIDs();
+    }
+  }, [pointsCount]);
+
   const loadDeviceTypes = async () => {
     try {
       setLoading(true);
@@ -59,7 +111,7 @@ const Device = ({
       device.push({
         typeDevice: deviceData[i]?.typeDevice || "",
         serialNumber: deviceData[i]?.serialNumber || "",
-        numberPhases: deviceData[i]?.numberPhases || "",
+        objectID: deviceData[i]?.objectID || "",
         verificationDate: deviceData[i]?.verificationDate || "",
         verificationInterval: deviceData[i]?.verificationInterval || "",
         dateInstallation: deviceData[i]?.dateInstallation || "",
@@ -275,6 +327,26 @@ const Device = ({
                       arrowDirection="right"
                     />
                   </Box>
+                  {/* 
+                    Идентификатор объекта (objectID)
+                    - Виден только администраторам (showRestrictedFields)
+                    - Автоматически присваивается при создании карточки
+                    - Заблокирован для редактирования (disabled)
+                    - Значение уникально для каждой точки
+                    был numberfases
+                  */}
+                  {showRestrictedFields && (
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                      <EnSelect
+                        id={`objectID-${index}`}
+                        label="Идентификатор объекта"
+                        value={device.objectID || ""}
+                        disabled
+                        size="small"
+                        sx={{ minWidth: 210 }}
+                      />
+                    </Box>
+                  )}
 
                   {/* Поле для ввода даты поверки */}
                   <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
